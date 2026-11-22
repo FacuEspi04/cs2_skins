@@ -246,15 +246,6 @@ input[type="search"]:focus-visible { outline: 2px solid var(--accent); outline-o
 .fijada { font-size: 0.78rem; color: var(--muted); cursor: pointer; }
 .versiones-caja[hidden], .fijada[hidden] { display: none; }
 .fijada:hover { color: var(--ink); }
-/* Fabricá: skins reales parecidos */
-.parecidos { margin-top: 16px; display: grid; gap: 6px; }
-.tarjetas-skin { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 4px; }
-.tskin { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 8px; display: grid; gap: 5px;
-  cursor: pointer; text-align: left; color: var(--ink); font: inherit; transition: border-color 0.2s, transform 0.2s; animation: aparecer 0.4s ease both; min-width: 0; }
-.tskin:hover, .tskin:focus-visible { border-color: var(--accent); transform: translateY(-2px); outline: none; }
-.tskin:hover .foto img { transform: scale(1.06) rotate(-2deg); }
-.tskin .n1 { font: 600 0.8rem/1.25 var(--font-display); }
-.tskin .n2 { font-size: 0.74rem; color: var(--muted); }
 @keyframes aparecer { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .etiqueta.pulso { animation: pulso 0.45s ease; }
 /* la fórmula de respaldo: una referencia, así que va en el gris de las referencias */
@@ -270,8 +261,12 @@ table.cuenta tr.total td { font-weight: 700; border-top: 2px solid var(--line); 
 @keyframes pulso { 50% { transform: scale(1.025); } }
 
 /* fabricá un skin */
-.taller { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
-@media (max-width: 900px) { .taller { grid-template-columns: 1fr; } }
+.taller { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr;
+  grid-template-areas: "mesa modelo" "control modelo"; gap: 14px 18px; align-items: start; }
+.taller .mesa { grid-area: mesa; }
+.taller .lado-modelo { grid-area: modelo; }
+.taller .formula { grid-area: control; margin-top: 0; }
+@media (max-width: 900px) { .taller { grid-template-columns: 1fr; grid-template-rows: none; grid-template-areas: "mesa" "modelo" "control"; } }
 .mesa { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: grid; gap: 16px; }
 .etiqueta {
   position: relative; background: var(--accent); color: var(--accent-ink); border-radius: var(--radius);
@@ -989,7 +984,7 @@ footer .wrap { display: grid; gap: 6px; }
     <div class="cabeza">
       <div class="ceja"><span class="grado" style="background:var(--accent)"></span>Abrir la caja · Probá el modelo</div>
       <h2>Fabricá un skin y mirá en qué puesto lo pone el modelo</h2>
-      <p class="leer">Elegí sus atributos como si Valve lo lanzara mañana. La etiqueta muestra el puesto que predice el modelo (0 es el skin más barato del mercado y 100, el más caro) y lo traduce a un precio del mercado de hoy, con un rango de ± {{MAE_CV}} puntos, el error típico en validación. Ojo: con colecciones recién salidas el error es mayor y va para arriba (en la prueba final, {{MAE_TEST}} puntos de error y {{SESGO_TEST0}} puestos de más en promedio), así que para un skin que sale mañana, el puesto real probablemente quede por debajo de la etiqueta. Si cargás algo que el modelo nunca vio, la etiqueta lo avisa. Debajo, como control, la regresión lineal hace su cuenta a la vista: podés abrirla y ver cuánto suma cada atributo.</p>
+      <p class="leer">Elegí sus atributos como si Valve lo lanzara mañana. La etiqueta muestra el puesto que predice el modelo (0 es el skin más barato del mercado y 100, el más caro) y lo traduce a un precio del mercado de hoy, con un rango de ± {{MAE_CV}} puntos, el error típico en validación. Ojo: con colecciones recién salidas el error es mayor y va para arriba (en la prueba final, {{MAE_TEST}} puntos de error y {{SESGO_TEST0}} puestos de más en promedio), así que para un skin que sale mañana, el puesto real probablemente quede por debajo de la etiqueta. Si cargás algo que el modelo nunca vio, la etiqueta lo avisa. Debajo de los atributos, como control, la regresión lineal hace su cuenta a la vista: podés abrirla y ver cuánto suma cada atributo.</p>
       <p class="leer">La vitrina muestra en vivo un <b>diseño real</b> con esos atributos, con la imagen de Steam para el exterior elegido y el color de su rareza. El modelo no mira el diseño (sólo los atributos), así que «Ver otro diseño» cambia la imagen pero no la predicción.</p>
     </div>
     <div class="taller">
@@ -1011,7 +1006,7 @@ footer .wrap { display: grid; gap: 6px; }
         </div>
         <p class="real" id="p-real" hidden></p>
       </form>
-      <div>
+      <div class="lado-modelo">
         <div class="vitrina" id="vitrina">
           <div class="vitrina-top"><span class="vitrina-rareza" id="v-rareza"></span><span class="sello-v" id="v-sello" hidden></span></div>
           <div class="vitrina-img" id="v-marco">
@@ -1034,23 +1029,18 @@ footer .wrap { display: grid; gap: 6px; }
           <span class="precio" id="t-precio">—</span>
           <p id="t-frase"></p>
         </div>
-        <div class="formula" aria-live="polite">
-          <div class="formula-cab">
-            <span>Control: la <b>regresión lineal</b>, calculada con su fórmula escrita en esta página</span>
-            <span class="formula-valor" id="f-ridge">—</span>
-          </div>
-          <details>
-            <summary>Ver la cuenta</summary>
-            <div class="tabla"><table class="cuenta"><tbody id="f-cuenta"></tbody></table></div>
-            <p class="pie">Cada atributo suma o resta puestos. Rareza y exterior van estandarizados (se les resta su promedio y se dividen por su desvío) y la dificultad de caja lleva además un indicador de «no es de caja». Son los {{N_COEF}} números de la regresión lineal de la comparación, reentrenada con los {{FILAS}} skins.</p>
-          </details>
-        </div>
         <div class="avisos" id="t-avisos"></div>
-        <div class="parecidos">
-          <h4>Skins reales con estos atributos</h4>
-          <p class="muted" style="font-size:.84rem">Misma arma, rareza, exterior y variante, primero los del mismo origen. Tocá uno para copiarlo y comparar su precio real con el del modelo.</p>
-          <div class="tarjetas-skin" id="p-parecidos"></div>
+      </div>
+      <div class="formula" id="formula" aria-live="polite">
+        <div class="formula-cab">
+          <span>Control: la <b>regresión lineal</b>, calculada con su fórmula escrita en esta página</span>
+          <span class="formula-valor" id="f-ridge">—</span>
         </div>
+        <details>
+          <summary>Ver la cuenta</summary>
+          <div class="tabla"><table class="cuenta"><tbody id="f-cuenta"></tbody></table></div>
+          <p class="pie">Cada atributo suma o resta puestos. Rareza y exterior van estandarizados (se les resta su promedio y se dividen por su desvío) y la dificultad de caja lleva además un indicador de «no es de caja». Son los {{N_COEF}} números de la regresión lineal de la comparación, reentrenada con los {{FILAS}} skins.</p>
+        </details>
       </div>
     </div>
     <div class="figura" style="margin-top:18px"><div id="g-proba" class="grafico" role="img" aria-label="Escalera del mercado con la posición predicha del skin fabricado"></div>
@@ -1407,23 +1397,7 @@ footer .wrap { display: grid; gap: 6px; }
     if (v) { v.signal("pred", pred); v.signal("lo", lo); v.signal("hi", hi); v.runAsync(); }
     const et = document.getElementById("etiqueta");
     et.classList.remove("pulso"); void et.offsetWidth; et.classList.add("pulso");
-    pintarParecidos(origen);
     pintarFormula(origen);
-  }
-  // skins reales con la misma arma, rareza, exterior y variante (primero los del mismo origen)
-  function pintarParecidos(origen) {
-    const souv = origen === "paquete souvenir" || origen === "sin identificar";
-    const variante = souv ? "Souvenir" : (caso.st ? "StatTrak" : "Normal");
-    const arma = APP.ARMAS[caso.arma], iguales = [];
-    APP.SKINS.forEach((s, i) => {
-      if (s.a === arma && s.r === caso.r && s.w === caso.w && s.v === variante) iguales.push({ i, mismo: s.o === origen });
-    });
-    iguales.sort((a, b) => (b.mismo - a.mismo) || (APP.SKINS[a.i].p - APP.SKINS[b.i].p));
-    document.getElementById("p-parecidos").innerHTML = iguales.length ? iguales.slice(0, 6).map(({ i, mismo }) => {
-      const s = APP.SKINS[i];
-      return `<button type="button" class="tskin" data-i="${i}">${fotoSkin(i)}<span class="n1">${esc(sinVariante(s.n))}</span>
-        <span class="n2">${usd(s.p)} · puesto ${fmt(s.q, 0)}${mismo ? "" : " · otro origen"}</span></button>`;
-    }).join("") : '<p class="muted" style="font-size:.86rem">No hay ningún skin real con esta combinación exacta: el modelo está prediciendo algo que no existe.</p>';
   }
   const infoNivel = document.getElementById("info-nivel");
   const ayudaNivel = document.getElementById("ayuda-nivel");
@@ -1448,9 +1422,6 @@ footer .wrap { display: grid; gap: 6px; }
     APP.ORIGENES.forEach((o, i) => so.add(new Option(o[0].toUpperCase() + o.slice(1), String(i))));
     so.addEventListener("change", () => { caso.o = Number(so.value); actualizar(); });
     document.getElementById("p-azar").addEventListener("click", () => copiar(APP.SKINS[Math.floor(Math.random() * APP.SKINS.length)]));
-    document.getElementById("p-parecidos").addEventListener("click", (ev) => {
-      const b = ev.target.closest(".tskin"); if (b) copiar(APP.SKINS[Number(b.dataset.i)]);
-    });
   }
 
   // ---------------------------------------------------------------- fotos de skins (portada, demos y Fabricá)
