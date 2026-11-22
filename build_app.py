@@ -260,7 +260,11 @@ for o in ["caja", "drop de mapa", "paquete souvenir", "sin identificar"]:
                         "sesgo": float(b["error"].mean())})
 mapa_tr = train[train["origen"] == "drop de mapa"]
 mapa_te = test[test["origen"] == "drop de mapa"]
-MAPA = {"col_tr": int(mapa_tr["collection"].nunique()), "col_te": int(mapa_te["collection"].nunique()),
+# Sólo colecciones con fecha: «Limited Edition Item» no tiene fecha de lanzamiento, así que no se
+# cuenta como colección vieja ni nueva (sus skins sí están en el entrenamiento). Así los conteos
+# coinciden con los de «Lo que encontramos» y «CS2 en cinco minutos».
+MAPA = {"col_tr": int(mapa_tr.dropna(subset=["collection_release"])["collection"].nunique()),
+        "col_te": int(mapa_te["collection"].nunique()),
         "ultima_tr": f"{mapa_tr['collection_release'].max():%m/%Y}",
         "primera_te": f"{mapa_te['collection_release'].min():%m/%Y}"}
 
@@ -547,8 +551,9 @@ if ruta_meta.exists():
     if meta.get("snapshot") == SNAPSHOT:
         for k, v in {"r2_cv": R2_CV, "r2_prueba": R2_TEST, "mae_prueba": MAE_TEST, "sesgo_prueba": SESGO_TEST}.items():
             assert abs(meta[k] - v) < 6e-3, f"{k}: notebook {meta[k]} contra aplicación {v}"
-        VERIFICADO = (f"coincide con el notebook: R² {meta['r2_cv']:.3f} en validación y "
-                      f"{meta['r2_prueba']:.3f} en la prueba")
+        coma3 = lambda x: f"{x:.3f}".replace(".", ",")
+        VERIFICADO = (f"coincide con el notebook: R² {coma3(meta['r2_cv'])} en validación y "
+                      f"{coma3(meta['r2_prueba'])} en la prueba")
     else:
         VERIFICADO = f"datos de otra fecha que el notebook ({meta.get('snapshot')}): números nuevos"
 print("verificación:", VERIFICADO)
@@ -696,26 +701,14 @@ for o in ORIGENES:
     if o == "drop de mapa":
         item["epocas"] = [{"skins": len(gg), "colecciones": int(gg["collection"].nunique()),
                            "usd": round(float(gg["sell_price_usd"].median()), 2)}
-                          for gg in (g[~g["armory"]], g[g["armory"]])]
+                          for gg in (g[~g["armory"] & g["collection_release"].notna()], g[g["armory"]])]
+        item["sin_fecha"] = int((g["collection_release"].isna()).sum())
     ORIGENES_INTRO.append(item)
-
-# 4b · probá abrir una caja: los skins reales de una caja, con su precio en Field-Tested
-caja_col = "The Kilowatt Collection" if (todo["collection"] == "The Kilowatt Collection").any() else \
-    todo[todo["origen"] == "caja"]["collection"].value_counts().index[0]
-g_caja = todo[(todo["collection"] == caja_col) & (todo["var"] == 0)]
-caja_nombre = g_caja["caja"].dropna().iloc[0] if "caja" in g_caja and g_caja["caja"].notna().any() else corto_col(caja_col)
-CAJA = {"nombre": caja_nombre, "col": corto_col(caja_col),
-        "img": src_estatico(CAT_EST["cajas"].get(caja_nombre, {}).get("imagen", ""), "cajas"), "items": []}
-for sid, gg in g_caja.groupby("skin_id"):
-    ft = gg[gg["wear_orden"] == 2]
-    fila = (ft if len(ft) else gg).sort_values("sell_price_usd").iloc[0]
-    CAJA["items"].append({"k": int(fila.name), "r": int(fila["rarity_orden"]), "p": round(float(fila["sell_price_usd"]), 2),
-                          "w": int(fila["wear_orden"])})
 
 # 5 · el puesto: siete skins reales repartidos por la fila del mercado
 FILA_MERCADO = [int((todo["q"] - k).abs().idxmin()) for k in (3, 15, 30, 50, 70, 85, 97)]
 
-INTRO = {"exterior": EXTERIOR, "escalera": ESCALERA, "origenes": ORIGENES_INTRO, "caja": CAJA, "fila": FILA_MERCADO}
+INTRO = {"exterior": EXTERIOR, "escalera": ESCALERA, "origenes": ORIGENES_INTRO, "fila": FILA_MERCADO}
 SKINS = SKINS.to_dict(orient="records")
 
 # ================================================================ 11 · gráficos (Altair)
@@ -1124,7 +1117,7 @@ punta = uno.transform_calculate(a="pred").mark_point(shape="triangle-down", size
 graf_proba = (fondo + banda + marca + punta).add_params(p_pred, p_lo, p_hi).properties(width="container", height=90)
 
 ESPECS = {k: v.to_dict() for k, v in {
-    "datos": graf_datos, "precios": graf_precios, "hallazgo": graf_hallazgo,
+    "datos": graf_datos, "hallazgo": graf_hallazgo,
     "armory_tiempo": graf_armory_tiempo, "armory_rareza": graf_armory_rareza, "modelo": graf_modelo,
     "error": graf_error, "armory": graf_armory, "comparacion": graf_comp, "importancia": graf_imp,
     "particion": graf_particion, "defensa": graf_defensa,
@@ -1152,17 +1145,19 @@ T["COBERTURA"] = CALIDAD.get("cobertura", "—").replace(".", ",")
 T["MERCADO_ARMAS"] = n(CALIDAD.get("items_de_arma_en_el_mercado", EMBUDO.get("steam_items_de_arma", 0)))
 T["DATOS_FRESCOS"] = "sí" if CALIDAD.get("datos_frescos") else "no"
 e = EMBUDO
+sale = lambda x: "0" if x == 0 else "−" + n(x)   # mismo formato en todas las filas
 T["EMBUDO"] = "".join(fila_tabla(c) for c in [
     ("Ítems de arma publicados en Steam ese día", "—", n(e.get("steam_items_de_arma", 0)), "Es el universo: la consulta ya pide sólo rifles, pistolas, subfusiles y pesadas"),
-    ("Muestra sistemática: páginas repartidas por todo el catálogo", "—", n(e.get("steam_items_leidos", 0)),
+    ("Muestra sistemática: páginas repartidas por todo el catálogo",
+     sale(e.get("steam_items_de_arma", 0) - e.get("steam_items_leidos", 0)), n(e.get("steam_items_leidos", 0)),
      f"{n(e.get('steam_paginas', 0))} páginas de 10 ítems, en proporción a cada categoría"),
-    ("Duplicados por la paginación en vivo", "−" + n(e.get("steam_items_leidos", 0) - e.get("steam_sin_duplicados", 0)),
+    ("Duplicados por la paginación en vivo", sale(e.get("steam_items_leidos", 0) - e.get("steam_sin_duplicados", 0)),
      n(e.get("steam_sin_duplicados", 0)), "El mercado se mueve mientras se pagina: un ítem puede aparecer en dos páginas"),
-    ("Sin precio o con precio ≤ 0", "−" + n(e.get("steam_sin_duplicados", 0) - e.get("steam_con_precio", 0)),
+    ("Sin precio o con precio ≤ 0", sale(e.get("steam_sin_duplicados", 0) - e.get("steam_con_precio", 0)),
      n(e.get("steam_con_precio", 0)), "Un ítem sin precio no sirve para predecir precio"),
-    ("Unión con el catálogo de ByMykel por market_hash_name", "−" + n(e.get("steam_con_precio", 0) - e.get("unidos", 0)),
+    ("Unión con el catálogo de ByMykel por market_hash_name", sale(e.get("steam_con_precio", 0) - e.get("unidos", 0)),
      n(e.get("unidos", 0)), f"El catálogo tiene {n(e.get('catalogo_armas', 0))} ítems de arma; todos los precios encontraron su ficha"),
-    ("Validación: clave única, colección en el 100 %, más de 1.000 filas", "0", n(len(df)), "Si algo falla, el pipeline no publica"),
+    ("Validación: clave única, colección en el 100 %, más de 1.000 filas", sale(e.get("unidos", len(df)) - len(df)), n(len(df)), "Si algo falla, el pipeline no publica"),
 ])
 T["PEDAZOS"] = "".join(fila_tabla((p["pedazo"], n(p["entrena"]), n(p["valida"]), f"{p['desde']} a {p['hasta']}"))
                        for p in tabla_pedazos)
@@ -1180,9 +1175,9 @@ T["SPEARMAN_RAREZA"] = n(SPEARMAN_RAREZA, 2)
 T["MED_MAPA_CONS"], T["MED_CAJA_MIL"] = n(MED_RO[("drop de mapa", 0)]), n(MED_RO[("caja", 2)])
 T["MED_CAJA_COV"], T["MED_SOUV_COV"] = n(MED_RO[("caja", 5)]), n(MED_RO[("paquete souvenir", 5)])
 T["MED_TODOS_CONS"], T["MED_TODOS_MIL"] = n(MEDIANA_RAREZA[0]), n(MEDIANA_RAREZA[2])
-T["H4_SEMAFORO"] = ("rojo en el semáforo (menos de 0,2): no hay efecto que afirmar" if abs(H4["r"]) < 0.2 else
-                    "amarillo en el semáforo (entre 0,2 y 0,6): no alcanza para afirmarla" if abs(H4["r"]) < 0.6 else
-                    "verde en el semáforo")
+T["H4_SEMAFORO"] = ("rojo en el semáforo de la cátedra para correlaciones (rojo debajo de 0,2, amarillo entre 0,2 y 0,6, verde arriba): no hay efecto que afirmar" if abs(H4["r"]) < 0.2 else
+                    "amarillo en el semáforo de la cátedra para correlaciones (rojo debajo de 0,2, amarillo entre 0,2 y 0,6, verde arriba): no alcanza para afirmarla" if abs(H4["r"]) < 0.6 else
+                    "verde en el semáforo de la cátedra para correlaciones (arriba de 0,6)")
 
 T["ELEGIDO"] = ELEGIDO
 T["R2_CV"], T["DESVIO_CV"] = n(R2_CV, 2), n(DESVIO_CV, 2)
@@ -1207,6 +1202,8 @@ T["MAPA_TR"], T["MAPA_TE"] = n(next(c["mediana"] for c in corrimiento if c["orig
     n(next(c["mediana"] for c in corrimiento if c["origen"] == "drop de mapa" and c["lado"] == "prueba"), 1)
 T["MAPA_SESGO"] = n(next(c["sesgo"] for c in corrimiento if c["origen"] == "drop de mapa" and c["lado"] == "prueba"), 1)
 T["MAPA_COL_TR"], T["MAPA_COL_TE"] = str(MAPA["col_tr"]), str(MAPA["col_te"])
+col_te_arm = int(mapa_te.loc[mapa_te["collection_release"] >= ARMORY_DESDE, "collection"].nunique())
+T["MAPA_TE_ARM"] = "todas del Armory" if col_te_arm == MAPA["col_te"] else f"{col_te_arm} de ellas del Armory"
 T["MAPA_ULTIMA"], T["MAPA_PRIMERA"] = MAPA["ultima_tr"], MAPA["primera_te"]
 T["MEDIANA_TEST"] = n(test["percentil"].median(), 0)
 T["DUELOS"] = "".join(fila_tabla((d["retador"], ("+" if d["dif"] >= 0 else "−") + n(abs(d["dif"]), 3),
@@ -1244,6 +1241,9 @@ T["CAJA_PASO_MAX"] = n(max(r["paso"] for r in CAJA_RAREZA if "paso" in r))
 # el Armory
 T["ARM_FECHA"] = ARMORY_DESDE.strftime("%d/%m/%Y")
 T["ARM_COL"], T["ARM_COL_PRE"] = str(ARM["col_arm"]), str(ARM["col_pre"])
+T["MAPA_SIN_FECHA"] = n(int(df.loc[(df["origen"] == "drop de mapa") & df["collection_release"].isna()].shape[0]))
+T["MAPA_SIN_FECHA_COL"] = ", ".join(sorted(df.loc[(df["origen"] == "drop de mapa") & df["collection_release"].isna(),
+                                                  "collection"].unique()))
 T["ARM_USD_PRE"], T["ARM_USD"] = usd(ARM["usd_pre"]), usd(ARM["usd_arm"])
 T["ARM_Q_PRE"], T["ARM_Q"] = n(ARM["q_pre"]), n(ARM["q_arm"])
 T["ARM_VECES"] = n(ARM["veces"])
@@ -1299,7 +1299,6 @@ T["MED_CLAS_MIL"], T["MED_ARM_MIL"] = n(med_mil_clas), n(med_mil_arm)
 T["NUBE_TR_R2"], T["NUBE_TR_ARRIBA"] = n(NUBE["tr_r2"], 2), pct(NUBE["tr_arriba"])
 T["NUBE_TR_SESGO"] = signo(NUBE["tr_sesgo"])
 T["NUBE_TE_R2"], T["NUBE_TE_ARRIBA"] = n(NUBE["te_r2"], 2), pct(NUBE["te_arriba"])
-T["CAJA_DEMO"], T["CAJA_DEMO_COL"] = CAJA["nombre"], CAJA["col"]
 
 T["N_COEF"] = str(N_COEF)
 T["R2_RIDGE2"] = n(res[REFERENCIA]["r2"], 2)

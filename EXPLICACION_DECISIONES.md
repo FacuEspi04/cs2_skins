@@ -681,7 +681,7 @@ Es la **versión final**: una aplicación en una URL pública, la misma que se m
 
 **Qué hay que traer:**
 
-- La URL pública ya abierta: https://franmanuel55.github.io/CS_Skins_app/ («que funcione en la notebook de alguien no alcanza»).
+- La URL pública ya abierta: https://cs2skins-docs.vercel.app/ («que funcione en la notebook de alguien no alcanza»).
 - El repositorio en GitHub con el README.
 - Lo que nos marcaron en la Entrega 3, resuelto.
 

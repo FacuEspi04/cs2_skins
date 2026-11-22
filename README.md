@@ -4,7 +4,7 @@ Proyecto integrador de **Ciencia de Datos** (UTN FRM, 2026) · grupo **5K10-13**
 
 **Pregunta:** ¿se puede estimar, sólo con los atributos que se conocen el día del lanzamiento, en qué percentil de precio va a quedar un skin de arma de Counter-Strike 2?
 
-**Aplicación:** https://franmanuel55.github.io/CS_Skins_app/ (GitHub Pages, carpeta `docs/`)
+**Aplicación:** https://cs2skins-docs.vercel.app/ (Vercel, publica la carpeta `docs/` de este repositorio)
 
 ## Qué hay en el repositorio
 
@@ -55,11 +55,14 @@ Tarda alrededor de un minuto. El script:
 4. arma los gráficos con Altair y escribe `docs/index.html`, una sola página con los datos adentro;
 5. **comprueba que los números coinciden con el notebook** (`data/modelo_metadatos_notebook.json`) y corta si no coinciden. Con un snapshot de otra fecha avisa que los números son nuevos.
 
-Si cambian los datos, se vuelve a correr y se hace commit de `docs/index.html`: GitHub Pages publica la versión nueva.
+Si cambian los datos, se vuelve a correr y se hace commit de `docs/index.html`: Vercel publica la versión nueva.
 
-### Publicar en GitHub Pages
+### Publicar
 
-En el repositorio: *Settings → Pages → Build and deployment → Deploy from a branch*, rama `main`, carpeta `/docs`. La URL queda como `https://USUARIO.github.io/REPOSITORIO/`.
+La página es estática (un `index.html` con los datos adentro y las imágenes en `docs/img/`), así que sirve cualquier hosting de archivos:
+
+- **Vercel** (la URL de arriba): proyecto importado desde este repositorio, con `docs` como *Root Directory* y sin comando de build. Cada push a `main` la vuelve a publicar.
+- **GitHub Pages**: *Settings → Pages → Build and deployment → Deploy from a branch*, rama `main`, carpeta `/docs`. La URL queda como `https://USUARIO.github.io/REPOSITORIO/`.
 
 ## El modelo, en una línea
 
