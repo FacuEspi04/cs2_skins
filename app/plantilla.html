@@ -227,24 +227,15 @@ select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); o
 .ficha .dentro { padding: 14px 16px 16px; display: grid; gap: 10px; }
 .ficha h3 { font-size: 1.02rem; line-height: 1.3; }
 .ficha .meta { font-size: 0.82rem; color: var(--muted); }
-.ficha dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 0.86rem; }
+.ficha dl { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; font-size: 0.86rem; }
 .ficha dt { color: var(--muted); }
-.ficha dd { margin: 0; text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
-.ficha .veredicto { font-size: 0.88rem; border-top: 1px dashed var(--line); padding-top: 10px; }
+.ficha dd { margin: 0; text-align: right; white-space: nowrap; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
 input[type="search"] { font: inherit; font-size: 0.92rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 8px 10px; width: 210px; max-width: 100%; }
 input[type="search"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* las versiones del mismo diseño (de la versión 1817): precio y puesto de cada una */
-.versiones-caja { display: grid; gap: 6px; border-top: 1px dashed var(--line); padding-top: 10px; }
-.versiones { display: grid; gap: 2px; max-height: 260px; overflow-y: auto; }
-.version { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 5px 8px; border-radius: 4px;
-  border: 1px solid transparent; cursor: pointer; background: transparent; text-align: left; width: 100%; font-size: 0.8rem; }
-.version:hover, .version[aria-pressed="true"] { border-color: var(--line); background: color-mix(in srgb, var(--ink) 5%, transparent); }
-.version .vp { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
-.version .vb { grid-column: 1 / -1; position: relative; height: 4px; background: var(--line); border-radius: 2px; }
-.version .vb i { position: absolute; top: -3px; width: 3px; height: 10px; margin-left: -1.5px; border-radius: 1px; background: var(--c); }
+/* ficha fijada */
 .fijada { font-size: 0.78rem; color: var(--muted); cursor: pointer; }
-.versiones-caja[hidden], .fijada[hidden] { display: none; }
+.fijada[hidden] { display: none; }
 .fijada:hover { color: var(--ink); }
 @keyframes aparecer { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .etiqueta.pulso { animation: pulso 0.45s ease; }
@@ -492,7 +483,7 @@ input[type="range"] { width: 100%; accent-color: var(--ink); cursor: pointer; }
 .vitrina-nota { font-size: 0.82rem; color: var(--muted); max-width: none; text-align: center; }
 .vitrina-acciones { display: flex; justify-content: center; }
 .boton.chico { padding: 5px 10px; font-size: 0.82rem; }
-.ficha-img { aspect-ratio: 4 / 3; display: grid; place-items: center; padding: 8px 18px 0;
+.ficha-img { aspect-ratio: 16 / 9; display: grid; place-items: center; padding: 8px 18px 0;
   background: radial-gradient(100% 80% at 50% 45%, color-mix(in srgb, var(--c, var(--line)) 38%, transparent), transparent 72%); }
 .ficha-img img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 14px rgb(0 0 0 / 0.4)); }
 .ficha-img[hidden] { display: none; }
@@ -936,7 +927,7 @@ footer .wrap { display: grid; gap: 6px; }
     <div class="cabeza">
       <div class="ceja"><span class="grado" style="background:var(--accent)"></span>Abrir la caja · Explorá</div>
       <h2>Los {{FILAS}} skins en una imagen: los Covert siempre arriba, y la nube baja con el Armory</h2>
-      <p class="leer">Cada punto es un skin, con el color de su rareza. Hacia la derecha están las colecciones más nuevas y hacia arriba, los skins más caros. Pasá el mouse para ver la ficha de un skin y tocalo para dejarla fija, con todas las versiones de su diseño. Usá los filtros o el buscador para quedarte con un arma, una rareza, una forma de conseguirlo o un nombre. Para mirar: los rojos (Covert) siempre arriba, las colecciones de 2013 y la franja del Armory, donde la nube baja.</p>
+      <p class="leer">Cada punto es un skin, con el color de su rareza. Hacia la derecha están las colecciones más nuevas y hacia arriba, los skins más caros. Pasá el mouse para ver la ficha de un skin, con lo que estimaba el modelo, y tocalo para dejarla fija. Usá los filtros o el buscador para quedarte con un arma, una rareza, una forma de conseguirlo o un nombre. Para mirar: los rojos (Covert) siempre arriba, las colecciones de 2013 y la franja del Armory, donde la nube baja.</p>
     </div>
     <div class="controles" role="group" aria-label="Filtros de la exploración">
       <label class="campo" for="e-origen"><span>Cómo se consigue</span>
@@ -959,12 +950,7 @@ footer .wrap { display: grid; gap: 6px; }
           <h3 id="f-nombre">Tocá un punto</h3>
           <p class="meta" id="f-meta">La ficha muestra de dónde sale el skin, cuánto cuesta y en qué puesto del mercado está.</p>
           <dl id="f-datos"></dl>
-          <p class="veredicto" id="f-veredicto"></p>
-          <div class="versiones-caja" id="f-versiones" hidden>
-            <span class="ceja" style="margin:0">Las versiones de este diseño</span>
-            <div class="versiones" id="f-versiones-lista"></div>
-          </div>
-          <p class="fijada" id="f-fijada" hidden>Ficha fijada. Tocá otro punto para cambiarla, o tocá acá para soltarla.</p>
+          <p class="fijada" id="f-fijada" hidden>Fijada · tocá acá para soltarla</p>
         </div>
       </aside>
     </div>
@@ -1191,28 +1177,7 @@ footer .wrap { display: grid; gap: 6px; }
       esperaBusca = setTimeout(() => { filtros.f_buscar = sb.value.trim().toLowerCase(); if (vistas.explora) aplicarFiltros(vistas.explora.view); }, 160);
     });
   }
-  // las versiones de cada diseño (mismo arma y diseño, distinto exterior o variante)
-  const VERSIONES = new Map();
-  APP.SKINS.forEach((s, i) => { const c = s.a + "|" + sinVariante(s.n); if (!VERSIONES.has(c)) VERSIONES.set(c, []); VERSIONES.get(c).push(i); });
-  const ORDEN_VAR = { Normal: 0, StatTrak: 1, Souvenir: 2 };
-  VERSIONES.forEach((l) => l.sort((x, y) => (ORDEN_VAR[APP.SKINS[x].v] - ORDEN_VAR[APP.SKINS[y].v]) || (APP.SKINS[x].w - APP.SKINS[y].w)));
   let fijada = null;   // con un clic la ficha queda fija y el mouse deja de cambiarla
-  function pintarVersiones(d) {
-    const lista = VERSIONES.get(d.a + "|" + sinVariante(d.n)) || [];
-    const caja = document.getElementById("f-versiones");
-    caja.hidden = lista.length < 2;
-    if (lista.length < 2) return;
-    document.getElementById("f-versiones-lista").innerHTML = lista.map((i) => {
-      const s = APP.SKINS[i];
-      return `<button type="button" class="version" data-i="${i}" aria-pressed="${s === d}">
-        <span>${s.v === "Normal" ? "" : (s.v === "StatTrak" ? "StatTrak™ · " : "Souvenir · ")}${EXTERIORES[s.w]}</span><span class="vp">${usd(s.p)}</span>
-        <span class="vb" aria-hidden="true"><i style="left:${s.q}%;--c:${APP.COL_RAREZA[s.r]}"></i></span></button>`;
-    }).join("");
-  }
-  document.getElementById("f-versiones-lista").addEventListener("click", (ev) => {
-    const b = ev.target.closest(".version"); if (!b) return;
-    fijar(APP.SKINS[Number(b.dataset.i)]);
-  });
   function fijar(d) {
     fijada = d;
     document.getElementById("f-fijada").hidden = !d;
@@ -1232,13 +1197,9 @@ footer .wrap { display: grid; gap: 6px; }
       ? `Colección ${col}, salió en ${MESES[Number(d.f.slice(5, 7)) - 1]} de ${d.f.slice(0, 4)}` : `Colección ${col}, sin fecha de lanzamiento`;
     const filas = [["Cómo se consigue", d.o[0].toUpperCase() + d.o.slice(1)],
                    ["Rareza", RAREZAS[d.r]], ["Exterior", EXTERIORES[d.w]], ["Variante", d.v],
-                   ["Precio en Steam", usd(d.p)], ["Puesto en el mercado", fmt(d.q, 0) + " de 100"]];
+                   ["Precio en Steam", usd(d.p)], ["Puesto en el mercado", fmt(d.q, 0) + " de 100"],
+                   ["Estimó el modelo", usd(d.ph)]];
     document.getElementById("f-datos").innerHTML = filas.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
-    const frases = [`Es más caro que ${fmt(d.q, 0)} de cada 100 skins del mercado.`];
-    if (d.o === "drop de mapa" && d.f >= APP.ARMORY_DESDE) frases.push("Es de una colección del Armory, que se canjea con un pase: en general sus skins abundan y valen menos que los de mapa viejos.");
-    frases.push(`El modelo, sin haber visto su colección, lo estimaba en ${usd(d.ph)}.`);
-    document.getElementById("f-veredicto").textContent = frases.join(" ");
-    pintarVersiones(d);
   }
 
   // ---------------------------------------------------------------- fabricá un skin
