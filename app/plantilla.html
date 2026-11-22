@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: una escalera de precios. Arriba la tira del mercado; el tallo baja sección por sección
+/* Layout: una escalera de precios. Arriba seis AK-47 del más barato al más caro; el tallo baja sección por sección
    sobre el fondo del inventario; la copa es una banda más oscura donde manda el usuario. */
 :root {
   --bg: #13161b;          /* fondo de inventario, gris azulado */
@@ -22,6 +22,8 @@
   --accent: #f0a93b;      /* el ámbar de la etiqueta de precio */
   --accent-ink: #1a1206;
   --warn: #ff7a59;
+  --coral: #ff5f3d;
+  --blue: #4b69ff;
   --armory: {{COL_ARMORY}};   /* el Armory: mismo color que en los gráficos (build_app.py) */
   --ref: {{COL_GRIS}};       /* todos juntos, el resto, pisos y referencias */
   --font-display: "Chakra Petch", "Rajdhani", "Arial Narrow", system-ui, sans-serif;
@@ -33,13 +35,13 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     --bg: #eef0f3; --surface: #ffffff; --sunk: #e2e6eb; --ink: #14181d; --muted: #545e69;
-    --line: #cfd5dc; --accent: #a8640a; --accent-ink: #fff8ec; --warn: #c2410c;
+    --line: #cfd5dc; --accent: #a8640a; --accent-ink: #fff8ec; --warn: #c2410c; --coral: #d93d1c; --blue: #3550e0;
     color-scheme: light;
   }
 }
 :root[data-theme="light"] {
   --bg: #eef0f3; --surface: #ffffff; --sunk: #e2e6eb; --ink: #14181d; --muted: #545e69;
-  --line: #cfd5dc; --accent: #a8640a; --accent-ink: #fff8ec; --warn: #c2410c;
+  --line: #cfd5dc; --accent: #a8640a; --accent-ink: #fff8ec; --warn: #c2410c; --coral: #d93d1c; --blue: #3550e0;
   color-scheme: light;
 }
 
@@ -57,8 +59,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.15; text-wrap: balance; margin: 0; }
-h1 { font-size: clamp(2rem, 4.6vw, 3.3rem); letter-spacing: -0.01em; }
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; line-height: 1.15; text-wrap: balance; margin: 0; }
+h4 { font-size: 1rem; }
+h1 { font-size: clamp(2rem, 4.8vw, 3.4rem); letter-spacing: -0.01em; }
 h2 { font-size: clamp(1.5rem, 3vw, 2.15rem); }
 h3 { font-size: 1.12rem; }
 p { margin: 0; max-width: 68ch; }
@@ -136,42 +139,33 @@ section { padding-block: clamp(48px, 8vw, 88px); border-bottom: 1px solid var(--
 .figura { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 18px 10px; }
 .pie { font-size: 0.82rem; color: var(--muted); margin-top: 10px; }
 
-/* portada */
+/* portada (como la versión 1817) */
 .portada { padding-top: clamp(36px, 6vw, 64px); }
-.portada .pregunta { max-width: 22ch; }
-.bajada { font-size: 1.08rem; color: var(--muted); margin-top: 16px; }
-.tira { margin-top: 30px; }
-/* seis AK-47 reales, del más barato al más caro (el precio va neutro: el ámbar es del modelo) */
-.gancho { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-top: 26px; }
+.bajada { font-size: 1.1rem; color: var(--muted); margin-top: 16px; }
+.gancho { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-top: 28px; }
 @media (max-width: 760px) { .gancho { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.gancho .item { display: grid; gap: 6px; align-content: start; }
-.gancho .foto { aspect-ratio: 4 / 3; border-radius: var(--radius); display: grid; place-items: center; overflow: hidden;
-  background: radial-gradient(circle at 50% 62%, color-mix(in srgb, var(--c) 38%, transparent), transparent 68%), var(--surface);
-  border-bottom: 3px solid var(--c); }
-.gancho .foto img { width: 92%; height: 92%; object-fit: contain; filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.45)); }
-.gancho .foto span { font: 600 0.8rem var(--font-display); color: var(--muted); padding: 6px; text-align: center; }
-.gancho .valor-usd { font: 700 0.98rem var(--font-display); font-variant-numeric: tabular-nums; }
-.gancho .n { font-size: 0.76rem; line-height: 1.3; color: var(--muted); }
-.gancho-eje { margin-top: 10px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, {{GRADIENTE_RAREZA}}); }
-.gancho-eje + p { font-size: 0.84rem; color: var(--muted); margin-top: 6px; max-width: none; display: flex; justify-content: space-between; }
-.tesis {
-  margin: 34px 0 0; padding: 20px 22px 20px 26px; position: relative;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-  font-size: clamp(1.1rem, 2vw, 1.32rem); line-height: 1.45; max-width: none;
-}
-.tesis::before {   /* el agujero de la etiqueta de precio */
-  content: ""; position: absolute; left: -7px; top: 50%; width: 12px; height: 12px; margin-top: -6px;
-  border-radius: 50%; background: var(--bg); border: 1px solid var(--line);
-}
-.tesis b { color: var(--accent); font-weight: 600; }
-.cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+.gancho .item { display: grid; gap: 6px; align-content: start; min-width: 0; opacity: 0; transform: translateY(14px) scale(0.98); transition: opacity 0.5s ease, transform 0.5s ease; }
+.gancho.visto .item { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .gancho .item { opacity: 1; transform: none; } }
+.gancho .nombre { font-size: 0.78rem; line-height: 1.3; color: var(--muted); }
+.precio-tag { justify-self: start; position: relative; background: var(--accent); color: var(--accent-ink); font: 700 0.95rem var(--font-display); padding: 3px 10px 3px 16px; border-radius: 4px; font-variant-numeric: tabular-nums; }
+.precio-tag::before { content: ""; position: absolute; left: 5px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: var(--bg); }
+.flecha-precio { margin-top: 10px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #9fb3cc, #4b69ff, #8847ff, #d32ce6, #eb4b4b); }
+.flecha-precio + p { font-size: 0.86rem; color: var(--muted); margin-top: 6px; max-width: none; display: flex; justify-content: space-between; }
+.pasos4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 30px; counter-reset: p4; }
+@media (max-width: 860px) { .pasos4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .pasos4 { grid-template-columns: 1fr; } }
+.pasos4 a { counter-increment: p4; text-decoration: none; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; transition: border-color 0.2s, transform 0.2s; }
+.pasos4 a:hover, .pasos4 a:focus-visible { border-color: var(--accent); transform: translateY(-2px); }
+.pasos4 a::before { content: counter(p4); font: 700 1.4rem/1 var(--font-display); color: var(--accent); }
+.pasos4 span { font-size: 0.9rem; color: var(--muted); }
+.tesis { margin: 30px 0 0; padding: 20px 22px 20px 26px; position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); font-size: clamp(1.08rem, 2vw, 1.28rem); line-height: 1.45; max-width: none; }
+.tesis b { color: var(--accent); }
+.cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
 .cifra { border-top: 3px solid var(--c, var(--accent)); background: var(--surface); padding: 14px 16px 16px; border-radius: 0 0 var(--radius) var(--radius); }
 .cifra .valor { font: 600 2.3rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
 .cifra .que { margin-top: 8px; font-size: 0.9rem; color: var(--muted); }
-.cambio { margin-top: 26px; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 0.92rem; }
-.cambio dt { font: 500 0.72rem/1.9 var(--font-data); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-.cambio dd { margin: 0; }
-@media (max-width: 720px) { .cifras { grid-template-columns: 1fr; } .cambio { grid-template-columns: 1fr; } }
+@media (max-width: 720px) { .cifras { grid-template-columns: 1fr; } }
 
 /* cómo lo sabemos */
 details.sabemos { margin-top: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
@@ -237,6 +231,43 @@ select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); o
 .ficha dt { color: var(--muted); }
 .ficha dd { margin: 0; text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
 .ficha .veredicto { font-size: 0.88rem; border-top: 1px dashed var(--line); padding-top: 10px; }
+input[type="search"] { font: inherit; font-size: 0.92rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 8px 10px; width: 210px; max-width: 100%; }
+input[type="search"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* las versiones del mismo diseño (de la versión 1817): precio y puesto de cada una */
+.versiones-caja { display: grid; gap: 6px; border-top: 1px dashed var(--line); padding-top: 10px; }
+.versiones { display: grid; gap: 2px; max-height: 260px; overflow-y: auto; }
+.version { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 5px 8px; border-radius: 4px;
+  border: 1px solid transparent; cursor: pointer; background: transparent; text-align: left; width: 100%; font-size: 0.8rem; }
+.version:hover, .version[aria-pressed="true"] { border-color: var(--line); background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.version .vp { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.version .vb { grid-column: 1 / -1; position: relative; height: 4px; background: var(--line); border-radius: 2px; }
+.version .vb i { position: absolute; top: -3px; width: 3px; height: 10px; margin-left: -1.5px; border-radius: 1px; background: var(--c); }
+.fijada { font-size: 0.78rem; color: var(--muted); cursor: pointer; }
+.versiones-caja[hidden], .fijada[hidden] { display: none; }
+.fijada:hover { color: var(--ink); }
+/* Fabricá: skins reales parecidos */
+.parecidos { margin-top: 16px; display: grid; gap: 6px; }
+.tarjetas-skin { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 4px; }
+.tskin { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 8px; display: grid; gap: 5px;
+  cursor: pointer; text-align: left; color: var(--ink); font: inherit; transition: border-color 0.2s, transform 0.2s; animation: aparecer 0.4s ease both; min-width: 0; }
+.tskin:hover, .tskin:focus-visible { border-color: var(--accent); transform: translateY(-2px); outline: none; }
+.tskin:hover .foto img { transform: scale(1.06) rotate(-2deg); }
+.tskin .n1 { font: 600 0.8rem/1.25 var(--font-display); }
+.tskin .n2 { font-size: 0.74rem; color: var(--muted); }
+@keyframes aparecer { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.etiqueta.pulso { animation: pulso 0.45s ease; }
+/* la fórmula de respaldo: una referencia, así que va en el gris de las referencias */
+.formula { margin-top: 10px; border: 1px solid var(--line); border-left: 4px solid var(--ref); border-radius: var(--radius); background: var(--surface); padding: 10px 14px; display: grid; gap: 6px; }
+.formula-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 0.88rem; color: var(--muted); }
+.formula-cab b { color: var(--ink); font-weight: 600; }
+.formula-valor { font: 700 1.25rem var(--font-display); color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.formula summary { cursor: pointer; font-size: 0.84rem; color: var(--accent); }
+.formula summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+table.cuenta td { padding: 4px 8px; font-size: 0.82rem; }
+table.cuenta td:last-child { text-align: right; font-family: var(--font-data); }
+table.cuenta tr.total td { font-weight: 700; border-top: 2px solid var(--line); }
+@keyframes pulso { 50% { transform: scale(1.025); } }
 
 /* fabricá un skin */
 .taller { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
@@ -298,13 +329,35 @@ select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); o
 .alerta p { font-size: 0.96rem; }
 .conclusiones { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 72ch; }
 
-/* CS2 en dos minutos */
-.nombre { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 6px; margin: 6px 0 4px; font: 600 clamp(1.15rem, 2.6vw, 1.7rem)/1.2 var(--font-display); }
-.nombre > span { display: grid; gap: 6px; justify-items: start; }
-.nombre > span > i { font: 500 0.66rem/1 var(--font-data); font-style: normal; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-.nombre b { font-weight: 600; padding: 2px 8px; border-radius: 4px; border-bottom: 3px solid var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
-.nombre .sep { color: var(--muted); padding-bottom: 4px; }
-.glosario { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; margin-top: 22px; }
+/* CS2 en cinco minutos, plegada */
+section.plegada { padding-block: 26px; }
+details.juego { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+details.juego > summary { cursor: pointer; list-style: none; padding: 16px 18px 16px 46px; display: grid; gap: 6px; position: relative; }
+details.juego > summary::-webkit-details-marker { display: none; }
+details.juego > summary::before { content: "+"; position: absolute; left: 18px; top: 14px; font: 600 1.3rem var(--font-data); color: var(--accent); }
+details.juego[open] > summary::before { content: "−"; }
+details.juego > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+details.juego > summary:hover .juego-titulo { color: var(--accent); }
+.juego-titulo { font: 600 1.18rem/1.25 var(--font-display); }
+.juego-sub { font-size: 0.9rem; color: var(--muted); max-width: 80ch; }
+.juego-cuerpo { padding: 6px 18px 22px; border-top: 1px solid var(--line); }
+.juego-cuerpo > .leer { margin-top: 14px; }
+
+/* CS2 en cinco minutos: las demos (de la versión 1817, con la paleta de esta página) */
+.demo { padding-block: 30px; border-bottom: 1px dashed var(--line); display: grid; gap: 12px; }
+.demo:first-of-type { padding-top: 6px; }
+.demo h3 { font-size: 1.22rem; }
+.anatomia { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 22px; align-items: center; }
+@media (max-width: 820px) { .anatomia { grid-template-columns: 1fr; } }
+.anatomia > *, .desgaste-demo > *, .caja-demo > * { min-width: 0; }
+.nombre-skin { font: 600 clamp(1.05rem, 2.6vw, 1.6rem)/1.6 var(--font-display); display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.parte { border: 0; border-bottom: 3px solid var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--ink);
+  font: inherit; padding: 2px 8px; border-radius: 4px 4px 0 0; cursor: pointer; transition: background 0.2s; }
+.parte[aria-pressed="true"], .parte:hover { background: color-mix(in srgb, var(--c) 34%, transparent); }
+.parte:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.explica { margin-top: 12px; min-height: 92px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; max-width: none; }
+.explica b { color: var(--ink); }
+.glosario { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; margin-top: 16px; }
 .term { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
 .term h3 { font-size: 1.02rem; }
 .term p { font-size: 0.92rem; color: var(--muted); }
@@ -313,9 +366,104 @@ select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); o
 .term.importa h3 { color: var(--ink); }
 .rarezas { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
 .cuadradito { display: inline-block; font-size: 0.78rem; line-height: 1.45; padding: 1px 8px; border-radius: 3px; color: var(--t); background: var(--c); font-weight: 600; white-space: nowrap; }
-.desgaste { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 2px; }
-.desgaste span { font-size: 0.7rem; line-height: 1.25; text-align: center; padding: 18px 2px 4px; border-radius: 3px; color: var(--muted);
-  background: linear-gradient(to bottom, color-mix(in srgb, var(--ink) var(--g), var(--line)) 0 14px, transparent 14px); }
+.muted { color: var(--muted); }
+.rejilla { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.rejilla > * { min-width: 0; }
+.tarjeta { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.tarjeta p { font-size: 0.92rem; color: var(--muted); }
+.tarjeta p b { color: var(--ink); }
+.st { color: #cf6a32; } .sv { color: #d4b106; }   /* los colores del juego para StatTrak y Souvenir */
+/* imágenes de skins: fondo de inventario con el color de la rareza; si no carga, el nombre */
+.foto { position: relative; aspect-ratio: 4 / 3; border-radius: var(--radius); overflow: hidden; display: grid; place-items: center;
+  background: radial-gradient(circle at 50% 62%, color-mix(in srgb, var(--c, #8a93a0) 38%, transparent), transparent 68%), var(--surface);
+  border-bottom: 3px solid var(--c, var(--line)); }
+.foto img { width: 92%; height: 92%; object-fit: contain; filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.45)); transition: transform 0.3s ease, filter 0.4s ease; }
+.foto .respaldo { position: absolute; inset: 0; display: none; place-items: center; padding: 8px; text-align: center; font: 600 0.8rem var(--font-display); color: var(--muted); }
+.foto.sin-imagen img { display: none; }
+.foto.sin-imagen .respaldo { display: grid; }
+.foto.grande { aspect-ratio: 16 / 10; }
+.escalera { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 900px) { .escalera { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .escalera { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.escalon { display: grid; gap: 7px; align-content: start; background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: var(--radius); padding: 10px; min-width: 0; }
+.escalon h4 { color: color-mix(in srgb, var(--c) 75%, var(--ink)); font-size: 0.98rem; }
+.escalon .dato { font-size: 0.8rem; color: var(--muted); }
+.escalon .dato b { color: var(--ink); font-family: var(--font-data); font-weight: 500; white-space: nowrap; }
+.barrita { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.barrita > i { display: block; height: 100%; width: 0; background: var(--c); border-radius: 4px; transition: width 1.1s cubic-bezier(.2, .8, .2, 1); }
+.visto .barrita > i { width: var(--w); }
+.desgaste-demo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: center; }
+@media (max-width: 820px) { .desgaste-demo { grid-template-columns: 1fr; } }
+.rayas { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.4s ease; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='120'%3E%3Cg stroke='%23fff' stroke-width='1.2' opacity='.9' fill='none'%3E%3Cpath d='M10 20l40 6M70 90l50-14M30 70l18 22M100 30l44 20M8 104l30-8M120 100l30 6M60 40l14-22M90 60l20 4'/%3E%3C/g%3E%3Cg fill='%23000' opacity='.55'%3E%3Ccircle cx='40' cy='50' r='3'/%3E%3Ccircle cx='110' cy='80' r='4'/%3E%3Ccircle cx='140' cy='20' r='2'/%3E%3Ccircle cx='20' cy='90' r='2.5'/%3E%3C/g%3E%3C/svg%3E"); background-size: 160px 120px; }
+.regla-float { position: relative; height: 34px; margin-top: 8px; }
+.regla-float .tramo { position: absolute; top: 10px; height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--ink) 18%, transparent); transition: background 0.25s; }
+.regla-float .tramo.on { background: var(--ink); }
+.regla-float .lbl { position: absolute; top: 26px; font: 0.68rem var(--font-data); color: var(--muted); transform: translateX(-50%); }
+input[type="range"] { width: 100%; accent-color: var(--ink); cursor: pointer; }
+.precios-ext { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.grande-num { font: 700 1.8rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.origenes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1000px) { .origenes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .origenes { grid-template-columns: 1fr; } }
+.origen { border-top: 4px solid var(--c); }
+.origen h4 { display: flex; align-items: center; gap: 8px; }
+.origen img.icono { width: 56px; height: 44px; object-fit: contain; }
+.origen .cifra-o { font: 600 1.3rem var(--font-display); font-variant-numeric: tabular-nums; }
+.epocas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+.epocas > div { border-radius: 4px; padding: 8px 10px; background: color-mix(in srgb, var(--c) 12%, transparent); border-left: 3px solid var(--c); }
+.epocas b { display: block; font: 600 1.05rem var(--font-display); color: var(--ink); }
+.epocas span { font-size: 0.76rem; color: var(--muted); }
+.caja-demo { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 18px; align-items: center; margin-top: 14px; }
+@media (max-width: 700px) { .caja-demo { grid-template-columns: 1fr; } .caja-demo > .foto { max-width: 180px; } }
+.ruleta { position: relative; overflow: hidden; border-radius: var(--radius); border: 1px solid var(--line); background: var(--sunk); height: 132px; }
+.ruleta::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--ink); box-shadow: 0 0 10px var(--ink); }
+.cinta-ruleta { display: flex; gap: 6px; padding: 8px; will-change: transform; }
+.cinta-ruleta .foto { flex: 0 0 120px; aspect-ratio: auto; height: 114px; }
+.resultado { min-height: 26px; font-size: 0.95rem; }
+.boton.lleno { background: var(--accent); color: var(--accent-ink); }
+.boton.lleno:hover { filter: brightness(1.08); background: var(--accent); }
+.boton:disabled { opacity: 0.5; cursor: wait; }
+.pista { position: relative; height: 170px; margin-top: 8px; }
+.pista .riel { position: absolute; left: 0; right: 0; bottom: 34px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--line), var(--muted)); }
+.pista .marcas { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; justify-content: space-between; font: 0.72rem var(--font-data); color: var(--muted); }
+.pista .ej { position: absolute; bottom: 44px; width: 84px; display: grid; gap: 3px; text-align: center; font-size: 0.7rem; color: var(--muted); }
+.pista .cursor { position: absolute; bottom: 26px; width: 0; transform: translateX(-50%); transition: left 0.25s ease; }
+.pista .cursor::before { content: ""; position: absolute; left: -9px; top: 0; border: 9px solid transparent; border-top: 12px solid var(--ink); }
+@media (max-width: 640px) { .pista .ej:nth-child(even) { display: none; } }
+.mercado-lectura { font-size: 1.05rem; max-width: none; }
+.mercado-lectura b { font-family: var(--font-display); font-size: 1.2rem; }
+
+/* entrada animada al hacer scroll (de la versión 1817); al imprimir, todo visible */
+.revelar { opacity: 0; transform: translateY(18px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.revelar.visto { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .revelar { opacity: 1; transform: none; } }
+@media print { .revelar, .gancho .item { opacity: 1 !important; transform: none !important; } }
+
+/* lo que encontramos, en tres pasos */
+.stepper { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.stepper button { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 7px 14px; cursor: pointer; font: 500 0.88rem var(--font-body); }
+.stepper button[aria-pressed="true"] { border-color: var(--accent); color: var(--ink); background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+.stepper button span { font-family: var(--font-data); color: var(--accent); margin-right: 6px; }
+.narra { min-height: 78px; font-size: 1rem; margin-bottom: 12px; transition: opacity 0.25s ease; max-width: 76ch; }
+.leyenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.86rem; margin-top: 8px; }
+.leyenda span { display: inline-flex; align-items: center; gap: 7px; transition: opacity 0.25s ease; }
+.leyenda i { width: 18px; height: 4px; border-radius: 2px; background: var(--c); }
+.leyenda i.punteada { background: repeating-linear-gradient(90deg, var(--c) 0 5px, transparent 5px 8px); }
+.leyenda i.punto { width: 10px; height: 10px; border-radius: 50%; }
+.leyenda .apagada { opacity: 0.35; }
+.fundido { transition: opacity 0.25s ease; }
+.fundido.cambiando { opacity: 0.35; }
+/* la nube con dos vistas */
+.alternar { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 3px; background: var(--surface); margin-bottom: 12px; flex-wrap: wrap; }
+.alternar button { border: 0; background: transparent; color: var(--muted); padding: 6px 14px; border-radius: 999px; cursor: pointer; font: 500 0.88rem var(--font-body); }
+.alternar button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.nube-lado { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .nube-lado { grid-template-columns: 1fr; } }
+.nube-lado > * { min-width: 0; }
+.marcador { display: grid; gap: 10px; }
+.marcador .tarjeta { border-left: 4px solid var(--c, var(--line)); }
+.marcador .tarjeta span:last-child { font-size: 0.86rem; color: var(--muted); }
 /* la vitrina: el skin en vivo, como en el inventario del juego */
 @property --vc { syntax: "<color>"; inherits: true; initial-value: #8847ff; }
 .vitrina {
@@ -376,7 +524,7 @@ footer .wrap { display: grid; gap: 6px; }
     <div class="marca">CS2 <span>·</span> precio antes de salir</div>
     <nav class="nav" aria-label="Secciones">
       <a href="#proyecto">El proyecto</a>
-      <a href="#glosario">CS2 en dos minutos</a>
+      <a href="#glosario">CS2 en cinco minutos</a>
       <span class="grupo">Inspeccionar</span>
       <a href="#datos">Los datos</a>
       <a href="#hallazgo">Lo que encontramos</a>
@@ -400,73 +548,133 @@ footer .wrap { display: grid; gap: 6px; }
 <section id="proyecto" class="portada">
   <div class="wrap">
     <div class="ceja"><span class="grado" style="background:var(--accent)"></span>Proyecto integrador · Ciencia de Datos · UTN FRM · Grupo 5K10-13</div>
-    <h1 class="pregunta">¿Se puede saber cuánto va a valer un skin antes de que salga a la venta?</h1>
-    <p class="bajada">En Counter-Strike 2 las armas se pueden «vestir» con diseños llamados <b>skins</b>, y los jugadores se los compran y venden con plata real. Cada skin nuevo llega con datos que se saben desde el primer día: qué tan raro es, para qué arma es y cómo se consigue. El precio, en cambio, recién aparece cuando el mercado lo decide. Nos preguntamos si con esos datos alcanza para adivinar <b>en qué puesto del mercado</b> va a quedar.</p>
-    <p class="bajada" style="margin-top:8px">¿No jugás CS2? Empezá por <a href="#glosario">CS2 en dos minutos</a>: explica cada palabra que usamos.</p>
-
+    <h1>¿Se puede saber cuánto va a valer un skin antes de que salga a la venta?</h1>
+    <p class="bajada">Los seis son el mismo fusil del juego Counter-Strike 2, el AK-47. Disparan igual. Lo único que cambia es la pintura, y por esa pintura alguien paga desde unos centavos hasta casi dos mil dólares.</p>
     <div class="gancho" id="gancho" aria-label="Seis AK-47 reales ordenados del más barato al más caro"></div>
-    <div class="gancho-eje" aria-hidden="true"></div>
-    <p><span>Más barato</span><span>Seis AK-47 del mercado del {{SNAPSHOT}}: disparan igual, sólo cambia la pintura</span><span>Más caro</span></p>
+    <div class="flecha-precio" aria-hidden="true"></div>
+    <p><span>Más barato</span><span>Más caro</span></p>
 
-    <div class="tira figura">
-      <p class="clave">Cuanto más rara es una skin, más a la derecha: más cara.</p>
-      <div id="g-tira" class="grafico" role="img" aria-label="Los skins ordenados por precio en seis filas, una por rareza; las rarezas altas quedan a la derecha"></div>
-      <p class="pie">Cada raya es uno de los {{FILAS}} skins del mercado del {{SNAPSHOT}}, ubicado por su puesto de precio: a la izquierda los más baratos, a la derecha los más caros. Hay una fila por rareza, con los colores que usa el juego, de la más común (abajo) a la más rara (arriba). El rombo marca el skin del medio de cada fila: la mitad cuesta menos que él. Los Consumer e Industrial se salen de la escalera; en <a href="#hallazgo">Lo que encontramos</a> explicamos por qué.</p>
-      <p class="porque">la rareza es el dato que más pesa para predecir el precio. Todo el proyecto parte de esta pista.</p>
+    <div class="pasos4">
+      <a href="#datos"><b>Bajamos el mercado</b><span>{{FILAS}} skins con su precio de un mismo día ({{SNAPSHOT}}).</span></a>
+      <a href="#hallazgo"><b>Buscamos qué ordena el precio</b><span>Rareza y forma de conseguirlo, sobre todo.</span></a>
+      <a href="#modelo"><b>Le enseñamos a un modelo</b><span>Con las colecciones viejas, para que adivine las nuevas.</span></a>
+      <a href="#modelo"><b>Lo probamos con el futuro</b><span>Con colecciones que nunca vio, como si todavía no hubieran salido.</span></a>
     </div>
 
-    <p class="tesis"><b>En parte:</b> con los datos del lanzamiento, el modelo explica el {{R2_CV_PCT}} del orden de precios en colecciones que ya conocía, pero con las {{COL_TEST}} más nuevas cae a {{R2_TEST}} y pone más caros de lo que valen al {{MAS_CARO}} de sus skins, porque desde {{ARM_MES}} el Armory las abarató.</p>
-
+    <p class="tesis revelar">La respuesta corta: <b>en buena parte, sí</b>. Con sólo sus atributos, el modelo explica el {{R2_CV_PCT}} de cómo se ordenan los precios en el mercado que conoce. Con las colecciones más nuevas se equivoca para arriba, y descubrimos por qué: <b>desde el Armory (octubre de 2024), los skins de drop se reparten de otra forma y valen mucho menos</b>.</p>
     <div class="cifras">
-      <div class="cifra">
-        <div class="valor">{{R2_CV}}</div>
-        <div class="que">Nota del modelo (R², de 0 a 1) con colecciones viejas que no vio. Una tabla que sólo mira rareza y exterior saca {{R2_TABLA}}.</div>
-      </div>
-      <div class="cifra">
-        <div class="valor">{{R2_TEST}}</div>
-        <div class="que">Nota con las {{COL_TEST}} colecciones más nuevas, la prueba final. La tabla simple saca {{R2_TABLA_TEST}}: ahí el modelo no le gana.</div>
-      </div>
-      <div class="cifra">
-        <div class="valor">{{MAS_CARO}}</div>
-        <div class="que">De los skins de esas colecciones nuevas, el modelo predijo más caros de lo que valen a este porcentaje.</div>
-      </div>
+      <div class="cifra revelar" style="--c:var(--blue)"><div class="valor">{{R2_CV}}</div><div class="que">R² con colecciones conocidas: explica el {{R2_CV_PCT}} del orden de precios. Una tabla que sólo mira rareza y exterior explica {{R2_TABLA}}.</div></div>
+      <div class="cifra revelar" style="--c:var(--accent)"><div class="valor">{{R2_TEST}}</div><div class="que">R² con las {{COL_TEST}} colecciones más nuevas, que nunca vio. Ahí no le gana a la tabla ({{R2_TABLA_TEST}}).</div></div>
+      <div class="cifra revelar" style="--c:var(--coral)"><div class="valor">{{MAS_CARO}}</div><div class="que">De los skins de esas colecciones nuevas los pone más caros de lo que son. El error tiene una dirección, y por eso tiene una explicación.</div></div>
     </div>
-
-    <dl class="cambio">
-      <dt>Datos</dt>
-      <dd>Foto del mercado del {{SNAPSHOT}}: {{FILAS}} skins de arma, el {{COBERTURA}} de los {{MERCADO_ARMAS}} publicados en Steam ese día.</dd>
-    </dl>
   </div>
 </section>
 
 <!-- ============================================================ CS2 EN DOS MINUTOS -->
-<section id="glosario">
+<!-- No es una sección del tallo (no afirma nada): va plegada para que el recorrido sea
+     portada → datos → encontramos → modelo. El link de la portada y el del índice la abren. -->
+<section id="glosario" class="plegada">
   <div class="wrap">
-    <div class="cabeza">
-      <div class="ceja"><span class="grado" style="background:var(--accent)"></span>Antes de empezar · CS2 en dos minutos</div>
-      <h2>Lo mínimo que hay que saber del juego para leer esta página</h2>
-      <p class="leer">Counter-Strike 2 es un juego de disparos gratuito de Valve. Las armas se pueden decorar con skins. No cambian nada del juego, son pura apariencia, y justamente por eso se volvieron objetos de colección. Los jugadores se los compran y venden entre ellos en el <b>Mercado de la Comunidad de Steam</b>, con plata real, como si fueran figuritas.</p>
-    </div>
+  <details class="juego" id="juego">
+    <summary>
+      <span class="ceja" style="margin:0"><span class="grado" style="background:var(--accent)"></span>Antes de empezar · CS2 en cinco minutos</span>
+      <span class="juego-titulo">¿No jugás CS2? Las cinco ideas del juego que hacen falta para leer esta página</span>
+      <span class="juego-sub">El nombre de un skin, la rareza, el desgaste, cómo se consigue y el puesto en el mercado, con skins reales de nuestros datos para tocar. Al final, un glosario.</span>
+    </summary>
+    <div class="juego-cuerpo">
+    <p class="leer">Counter-Strike 2 es un juego de disparos gratuito de Valve. Las armas se pueden decorar con skins. No cambian nada del juego, son pura apariencia, y justamente por eso se volvieron objetos de colección. Los jugadores se los compran y venden entre ellos en el <b>Mercado de la Comunidad de Steam</b>, con plata real, como si fueran figuritas.</p>
 
-    <div class="figura" style="padding-bottom:16px">
-      <p class="clave">Así se lee el nombre de un skin en el mercado.</p>
-      <div class="nombre" aria-label="StatTrak AK-47 Vulcan Field-Tested, separado en sus partes">
-        <span><b style="--c:var(--ink)">StatTrak™</b><i>Variante</i></span>
-        <span><b style="--c:#9aa3ae">AK-47</b><i>Arma</i></span>
-        <span class="sep">|</span>
-        <span><b style="--c:{{COL_COVERT}}">Vulcan</b><i>Diseño · es Covert</i></span>
-        <span><b style="--c:var(--ink)">(Field-Tested)</b><i>Exterior</i></span>
+    <!-- 1 · el nombre -->
+    <div class="demo revelar">
+      <div class="anatomia">
+        <div>
+          <h3><span class="paso">1</span>El nombre de un skin trae todo lo que sabemos de él</h3>
+          <p class="leer" style="margin-top:10px">Cada skin se vende en Steam con un nombre fijo. <b>Tocá cada parte del nombre:</b></p>
+          <div class="nombre-skin" id="anatomia" role="group" aria-label="Partes del nombre del skin"></div>
+          <div class="explica" id="anatomia-texto" aria-live="polite"></div>
+          <p class="pie">Cada combinación es un producto distinto, con su propio precio: el mismo diseño en Factory New y en Battle-Scarred son dos filas de nuestros datos, y la versión StatTrak™ es otra más. En total hay {{SKINS_BASE}} diseños para {{ARMAS_N}} armas, en {{COLECCIONES}} colecciones.</p>
+        </div>
+        <div id="anatomia-foto"></div>
       </div>
-      <p class="pie">Cada combinación es un producto distinto, con su propio precio. El mismo AK-47 | Vulcan en Factory New y en Battle-Scarred son dos filas de nuestros datos, y la versión StatTrak™ es otra más.</p>
     </div>
 
+    <!-- 2 · la rareza -->
+    <div class="demo revelar">
+      <h3><span class="paso">2</span>La rareza: seis escalones de color, y cuanto más alto, más difícil de conseguir</h3>
+      <p class="leer">Cada skin tiene una rareza que se ve en su color. En una caja (lo explicamos en el punto 4) los escalones altos casi nunca salen: de cada 1.000 cajas, unas 6 dan un Covert. La barra es el <b>precio típico</b> de cada rareza en nuestros datos.</p>
+      <div class="escalera" id="escalera"></div>
+      <p class="pie">Un ejemplo real de cada rareza. Las probabilidades son las que publica Valve para las cajas, que no traen Consumer ni Industrial. Fijate que esas dos no siguen la escalera de precios: lo explicamos en <a href="#hallazgo">Lo que encontramos</a>.</p>
+    </div>
+
+    <!-- 3 · el exterior -->
+    <div class="demo revelar">
+      <h3><span class="paso">3</span>El exterior: el mismo skin, más o menos gastado, cambia de precio</h3>
+      <p class="leer">Cada copia sale con un número de desgaste entre 0 y 1 (el <i>float</i>) que la ubica en uno de cinco exteriores. <b>Mové el control:</b> la imagen simula el desgaste y los precios son los reales del {{SNAPSHOT}}.</p>
+      <div class="desgaste-demo">
+        <div>
+          <div class="foto grande" id="ext-foto"></div>
+          <div class="regla-float" id="ext-regla" aria-hidden="true"></div>
+        </div>
+        <div>
+          <h4 id="ext-nombre"></h4>
+          <label class="campo" style="margin-top:12px" for="ext-control"><span>Exterior: <b id="ext-etq" style="color:var(--ink)"></b></span>
+            <input type="range" id="ext-control" min="0" max="4" step="1" value="0" aria-describedby="ext-explica"></label>
+          <div class="precios-ext">
+            <div class="tarjeta"><span class="muted" style="font-size:.8rem">Normal</span><span class="grande-num" id="ext-p-normal">—</span></div>
+            <div class="tarjeta"><span class="muted" style="font-size:.8rem">StatTrak™</span><span class="grande-num st" id="ext-p-st">—</span></div>
+          </div>
+          <p class="muted" id="ext-explica" style="margin-top:10px;font-size:.92rem"></p>
+        </div>
+      </div>
+      <div class="rejilla" style="margin-top:18px">
+        <div class="tarjeta"><h4 class="st">StatTrak™</h4><p>Cuenta las bajas que hacés con el arma. En una caja, una de cada diez copias sale StatTrak™. La versión StatTrak™ del mismo skin y exterior cuesta en la mediana <b>{{VECES_ST}} veces</b> la normal.</p></div>
+        <div class="tarjeta"><h4 class="sv">Souvenir</h4><p>Sale en paquetes de los torneos oficiales, con calcomanías del partido. La versión Souvenir del mismo skin y exterior cuesta en la mediana <b>{{VECES_SV}} veces</b> la normal.</p></div>
+        <div class="tarjeta"><h4>Variante</h4><p>En el proyecto, «variante» es normal, StatTrak™ o Souvenir. Arma + diseño + exterior + variante = <b>una fila</b> de nuestros datos.</p></div>
+      </div>
+    </div>
+
+    <!-- 4 · cómo se consigue -->
+    <div class="demo revelar">
+      <h3><span class="paso">4</span>Cómo se consigue: cuatro etiquetas en los datos, y una cambió de significado en 2024</h3>
+      <p class="leer">Cada colección se reparte de una manera, y eso decide cuántas copias hay en circulación. En los datos es la columna <b>origen</b>, con cuatro valores. La cifra grande es el precio típico de cada uno.</p>
+      <div class="origenes" id="origenes"></div>
+      <div class="caja-demo">
+        <div class="foto" id="caja-foto"></div>
+        <div>
+          <h4 id="caja-titulo">Probá abrir una caja</h4>
+          <p class="muted" style="font-size:.92rem;margin-top:4px">Para abrir una caja hace falta una llave que Valve vende a unos USD 2,50. La ruleta usa las probabilidades oficiales y los skins reales de la colección {{CAJA_DEMO_COL}}, con su precio en Field-Tested.</p>
+          <div class="ruleta" style="margin-top:10px"><div class="cinta-ruleta" id="ruleta"></div></div>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap">
+            <button type="button" class="boton lleno" id="abrir-caja">Abrir la caja</button>
+            <span class="resultado" id="caja-resultado" aria-live="polite"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5 · el puesto -->
+    <div class="demo revelar">
+      <h3><span class="paso">5</span>El puesto: en vez de dólares, medimos en qué lugar de la fila queda cada skin</h3>
+      <p class="leer">Imaginá los {{FILAS}} skins en fila, del más barato al más caro. El <b>puesto</b> (el percentil) dice qué parte de la fila queda detrás: puesto 80 es más caro que 80 de cada 100 skins. <b>Mové el precio</b> y mirá dónde cae.</p>
+      <div class="pista" id="pista">
+        <div class="riel"></div>
+        <div class="marcas"><span>0 · el más barato</span><span>50</span><span>100 · el más caro</span></div>
+        <div class="cursor" id="pista-cursor"></div>
+      </div>
+      <label class="campo" style="margin-top:10px" for="precio-control"><span>Precio de un skin</span>
+        <input type="range" id="precio-control" min="0" max="1000" value="500"></label>
+      <p class="mercado-lectura" id="mercado-lectura" aria-live="polite"></p>
+    </div>
+
+    <details class="sabemos" style="margin-top:24px">
+      <summary>Glosario de bolsillo: cada palabra que usamos</summary>
+      <div class="sabemos-cuerpo">
     <div class="glosario">
       <div class="term"><h3>Skin</h3><p>Un diseño para un arma. En nuestros datos, <b>una fila es un skin en una versión concreta</b>: arma + diseño + exterior + variante.</p></div>
       <div class="term"><h3>Rareza</h3><p>Qué tan difícil es que te toque. Hay seis niveles, cada uno con su color:</p>
         <div class="rarezas">{{CHIPS_RAREZA}}</div>
         <p>De más común a más rara. En una caja, de cada 100 aperturas salen unos <b>80 Mil-Spec, 16 Restricted, 3 Classified y menos de 1 Covert</b>.</p></div>
-      <div class="term"><h3>Exterior (desgaste)</h3><p>Qué tan gastado se ve el skin. Va de <b>Factory New</b> (nuevo de fábrica) a <b>Battle-Scarred</b> (marcado por la batalla). El mismo skin, más gastado, casi siempre vale menos.</p>
-        <div class="desgaste"><span style="--g:85%">Factory New</span><span style="--g:65%">Minimal Wear</span><span style="--g:45%">Field-Tested</span><span style="--g:28%">Well-Worn</span><span style="--g:12%">Battle-Scarred</span></div></div>
+      <div class="term"><h3>Exterior (desgaste)</h3><p>Qué tan gastado se ve el skin. Va de <b>Factory New</b> (nuevo de fábrica) a <b>Battle-Scarred</b> (marcado por la batalla). El mismo skin, más gastado, casi siempre vale menos (punto 3).</p></div>
       <div class="term"><h3>StatTrak™ y Souvenir</h3><p><b>StatTrak™</b>: el skin trae un contador de enemigos eliminados; sale de las mismas cajas, más o menos 1 de cada 10 veces. <b>Souvenir</b>: trae calcomanías de un torneo profesional; sale de paquetes que se reparten durante esos torneos. Las dos versiones suelen valer más que la normal.</p></div>
       <div class="term"><h3>Cómo se consigue (origen)</h3><p>{{CHIP_CAJA}}: se abre con una llave paga y te toca un skin al azar de su colección. {{CHIP_MAPA}}: skins sin caja, que se ganan jugando o (desde 2024) canjeando en el Armory. {{CHIP_SOUVENIR}}: de los torneos. {{CHIP_SIN_ID}}: versiones Souvenir que no pudimos asociar a ningún paquete.</p></div>
       <div class="term"><h3>Colección</h3><p>Un grupo de skins que sale junto, con fecha de lanzamiento. Es la unidad que usamos para separar lo viejo de lo nuevo: el modelo aprende con colecciones viejas y lo ponemos a prueba con las más nuevas.</p></div>
@@ -474,6 +682,10 @@ footer .wrap { display: grid; gap: 6px; }
       <div class="term"><h3>Puesto en el mercado (percentil)</h3><p>En lugar del precio, predecimos el <b>puesto del skin de 0 a 100</b>. Puesto 80 quiere decir que es más caro que 80 de cada 100 skins del mercado. Más abajo explicamos por qué conviene más que el precio en dólares.</p></div>
       <div class="term"><h3>Modelo y R²</h3><p>Un <b>modelo</b> es un programa que aprende reglas a partir de ejemplos y después las aplica a casos nuevos. El <b>R²</b> es su nota: 0 es lo mismo que decir siempre el promedio, 1 es acertar el orden perfecto.</p></div>
     </div>
+      </div>
+    </details>
+    </div>
+  </details>
   </div>
 </section>
 
@@ -544,15 +756,23 @@ footer .wrap { display: grid; gap: 6px; }
   <div class="wrap">
     <div class="cabeza">
       <div class="ceja"><span class="grado" style="background:var(--accent)"></span>Inspeccionar · Lo que encontramos</div>
-      <h2>La rareza ordena el precio, siempre que compares skins que se consiguen de la misma forma</h2>
-      <p class="leer">Cada línea de color une el puesto típico de cada rareza para una forma de conseguir el skin. Todas suben: entre los de caja (la línea gruesa), un Mil-Spec típico está en el puesto {{MED_CAJA_MIL}} de 100 y un Covert, en el {{MED_CAJA_COV}}.</p>
+      <h2>La rareza ordena el precio, siempre que compares skins que se consiguen de la misma forma. Y desde 2024, «drop de mapa» ya no es una sola forma</h2>
+      <p class="leer">Antes de entrenar un modelo, quisimos saber qué ordena el precio. El gráfico arranca con todo a la vista; <b>con los botones se cuenta en tres pasos</b>, desde el principio.</p>
     </div>
-    <div class="figura">
-      <p class="clave">Todas las líneas de color suben de izquierda a derecha.</p>
-      <div id="g-hallazgo" class="grafico" role="img" aria-label="Puesto típico por rareza, una línea por origen y una gris con todos juntos"></div>
-      <p class="pie">La línea gris punteada mezcla todos los orígenes y se quiebra: los Consumer (puesto {{MED_TODOS_CONS}}) parecen más caros que los Mil-Spec ({{MED_TODOS_MIL}}). No es que lo común valga más. Los Consumer nunca salen de cajas: caen en colecciones de mapa viejas, que hoy son escasas.</p>
-      <p class="porque">por esto el modelo necesita saber cómo se consigue un skin, y no sólo su rareza. Y por eso es tan grave lo que pasa a continuación con «drop de mapa».</p>
+    <div class="stepper" role="group" aria-label="Pasos del hallazgo">
+      <button type="button" data-paso="1" aria-pressed="false"><span>1</span>Todos juntos</button>
+      <button type="button" data-paso="2" aria-pressed="false"><span>2</span>Separados por origen</button>
+      <button type="button" data-paso="3" aria-pressed="true"><span>3</span>El drop, partido por época</button>
     </div>
+    <p class="narra" id="narra" aria-live="polite"></p>
+    <div class="figura fundido" id="fig-hallazgo">
+      <p class="clave" id="clave-hallazgo">Dentro de cada forma de conseguirlo, todas las líneas suben; «drop de mapa» se parte en dos.</p>
+      <div id="g-hallazgo" class="grafico" role="img" aria-label="Puesto típico por rareza; según el paso, todos juntos, por origen o con el drop de mapa partido por época"></div>
+      <div class="leyenda" id="leyenda-hallazgo"></div>
+      <p class="pie">Cada línea une el puesto típico (la mediana) de cada rareza para un grupo de skins. La gris punteada mezcla todos los orígenes y se quiebra: los Consumer (puesto {{MED_TODOS_CONS}}) parecen más caros que los Mil-Spec ({{MED_TODOS_MIL}}), porque nunca salen de cajas sino de colecciones de mapa viejas, que hoy son escasas.</p>
+      <p class="porque">el paso 2 dice que el modelo necesita dos datos, la rareza y el origen. El paso 3 anticipa su problema: recibe una sola etiqueta, «drop de mapa», para dos mercados distintos.</p>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px"><button type="button" class="boton" id="paso-sig">Contarlo desde el paso 1</button></div>
 
     <div class="bloque">
       <h3>Lo que más cambió el mercado: el Armory</h3>
@@ -579,7 +799,7 @@ footer .wrap { display: grid; gap: 6px; }
     <details class="sabemos">
       <summary>Cómo lo sabemos</summary>
       <div class="sabemos-cuerpo">
-        <p>Entre rareza y puesto, la correlación de Spearman da {{SPEARMAN_RAREZA}} con todos los skins mezclados. Las hipótesis se miden <b>comparando cada skin consigo mismo</b>: el mismo diseño en dos versiones. El diseño y la popularidad no están en ninguna columna, y así ese ruido se cancela.</p>
+        <p>Entre rareza y puesto, la correlación de Spearman da {{SPEARMAN_RAREZA}} con todos los skins mezclados. El tropiezo del paso 1 es una <b>paradoja de Simpson</b>: una tendencia que se cumple dentro de cada grupo se rompe al mezclarlos. Las hipótesis se miden <b>comparando cada skin consigo mismo</b>: el mismo diseño en dos versiones. El diseño y la popularidad no están en ninguna columna, y así ese ruido se cancela.</p>
         <div class="hip">
           <div><span class="sello si">Se sostuvo · H3</span><b>El exterior mueve el precio del mismo skin</b>
             <p>Dentro de cada diseño, la correlación de Spearman entre exterior y posición da en promedio <b>{{H3_MEDIA}}</b> (mediana {{H3_RHO}}) en {{H3_SKINS}} diseños: en el {{H3_BAJA}} % de ellos, más gastado es más barato. Entre skins distintos el efecto casi no se ve; comparando cada skin consigo mismo, sí.</p></div>
@@ -587,7 +807,7 @@ footer .wrap { display: grid; gap: 6px; }
             <p>Dentro de cada rareza, entre los {{H4_FILAS}} ítems de caja, la correlación entre <code>neg_log_p_item</code> y la posición es <b>{{H4_R}}</b>: {{H4_SEMAFORO}}. En el modelo termina aportando poco: 0,02 de R².</p></div>
         </div>
         <p>También se sostuvo la H2: la versión Souvenir del mismo skin y exterior está más arriba, con d de Cohen <b>{{H2_D}}</b> en {{H2_PARES}} pares y una mediana de +{{H2_MED}} puestos. Los números de esta página están recalculados sobre el snapshot del {{SNAPSHOT}}, el mismo del modelo; en la Entrega 2 (notebook del EDA, snapshot del 15/10) el promedio de H3 dio −0,70, H4 0,225 y la separación de H2, 0,97.</p>
-        <p><b>Cómo se armaron los gráficos.</b> El de líneas toma, para cada origen y cada rareza, la mediana del puesto (sólo grupos con 20 skins o más; las cajas no tienen Consumer ni Industrial). Usamos la mediana y no el promedio porque dentro de cada grupo hay unos pocos skins muy caros que tirarían el promedio para arriba. Los del Armory toman los skins de drop de mapa con fecha de colección: {{ARM_COL_PRE}} colecciones antes del {{ARM_FECHA}} y {{ARM_COL}} desde entonces. «Puesto típico» y «precio típico» son siempre la mediana.</p>
+        <p><b>Cómo se armaron los gráficos.</b> El de líneas toma, para cada origen y cada rareza, la mediana del puesto (sólo grupos con 20 skins o más; las cajas no tienen Consumer ni Industrial). Usamos la mediana y no el promedio porque dentro de cada grupo hay unos pocos skins muy caros que tirarían el promedio para arriba. En el paso 3, los skins de drop de mapa se parten por la fecha de su colección (desde el {{ARM_FECHA}}, del Armory): esa división es sólo de la página, el modelo no la usa. Los del Armory toman los skins de drop de mapa con fecha de colección: {{ARM_COL_PRE}} colecciones antes del {{ARM_FECHA}} y {{ARM_COL}} desde entonces. «Puesto típico» y «precio típico» son siempre la mediana.</p>
       </div>
     </details>
   </div>
@@ -628,11 +848,19 @@ footer .wrap { display: grid; gap: 6px; }
       <h3><span class="paso">3</span>Dónde se equivoca: casi siempre con el Armory</h3>
       <p class="leer">Miremos skin por skin las colecciones de la prueba. Si el modelo acertara, todos los puntos estarían sobre la línea punteada. Los salmón son los skins de drop de mapa del Armory: son el {{ARM_TEST_PCT}} de la prueba y el {{ARM_CARO}} de ellos queda arriba de la línea, en la zona donde el modelo los pone más caros de lo que valen. En promedio, el modelo los sube <b>{{ARM_SESGO}} puestos</b>; al resto, {{ARM_SESGO_RESTO}}.</p>
     </div>
-    <div class="figura">
-      <p class="clave">La nube salmón está casi toda arriba de la línea: el modelo la pone cara y es barata.</p>
-      <div id="g-error" class="grafico" role="img" aria-label="Puesto real contra puesto predicho de cada skin de la prueba; los del Armory quedan por encima de la diagonal"></div>
-      <p class="pie">Cada punto es un skin de las {{COL_TEST}} colecciones nuevas. En horizontal, su puesto real; en vertical, el puesto que dijo el modelo. Pasá el mouse por un punto para ver qué skin es.</p>
-      <p class="porque">el error no es al azar: se concentra en un grupo de skins que se puede nombrar. Eso quiere decir que tiene una causa.</p>
+    <div class="alternar" role="group" aria-label="Qué colecciones mostrar">
+      <button type="button" data-vista="1" aria-pressed="true">Colecciones nuevas (la prueba)</button>
+      <button type="button" data-vista="0" aria-pressed="false">Colecciones conocidas</button>
+    </div>
+    <div class="nube-lado">
+      <div class="figura fundido" id="fig-nube">
+        <p class="clave" id="clave-nube">La nube salmón está casi toda arriba de la línea: el modelo la pone cara y es barata.</p>
+        <div id="g-error" class="grafico" role="img" aria-label="Puesto real contra puesto predicho de cada skin; en la prueba, los del Armory quedan por encima de la diagonal"></div>
+        <div class="leyenda" id="leyenda-nube"></div>
+        <p class="pie">Cada punto es un skin. En horizontal, su puesto real; en vertical, el puesto que dijo el modelo. Arranca en la prueba (las {{COL_TEST}} colecciones nuevas); cambiá a las conocidas para comparar. Pasá el mouse por un punto para ver qué skin es.</p>
+        <p class="porque">el error no es al azar: se concentra en un grupo de skins que se puede nombrar. Eso quiere decir que tiene una causa.</p>
+      </div>
+      <div class="marcador" id="marcador-nube" aria-live="polite"></div>
     </div>
 
     <div class="bloque">
@@ -713,7 +941,7 @@ footer .wrap { display: grid; gap: 6px; }
     <div class="cabeza">
       <div class="ceja"><span class="grado" style="background:var(--accent)"></span>Abrir la caja · Explorá</div>
       <h2>Los {{FILAS}} skins en una imagen: los Covert siempre arriba, y la nube baja con el Armory</h2>
-      <p class="leer">Cada punto es un skin, con el color de su rareza. Hacia la derecha están las colecciones más nuevas y hacia arriba, los skins más caros. Pasá el mouse o tocá un punto para ver su ficha, y usá los filtros para quedarte con un arma, una rareza o una forma de conseguirlo. Para mirar: los rojos (Covert) siempre arriba, las colecciones de 2013 y la franja del Armory, donde la nube baja.</p>
+      <p class="leer">Cada punto es un skin, con el color de su rareza. Hacia la derecha están las colecciones más nuevas y hacia arriba, los skins más caros. Pasá el mouse para ver la ficha de un skin y tocalo para dejarla fija, con todas las versiones de su diseño. Usá los filtros o el buscador para quedarte con un arma, una rareza, una forma de conseguirlo o un nombre. Para mirar: los rojos (Covert) siempre arriba, las colecciones de 2013 y la franja del Armory, donde la nube baja.</p>
     </div>
     <div class="controles" role="group" aria-label="Filtros de la exploración">
       <label class="campo" for="e-origen"><span>Cómo se consigue</span>
@@ -722,6 +950,8 @@ footer .wrap { display: grid; gap: 6px; }
         <select id="e-arma"><option value="todas">Todas</option></select></label>
       <label class="campo" for="e-var"><span>Variante</span>
         <select id="e-var"><option value="todas">Todas</option><option value="Normal">Normal</option><option value="StatTrak">StatTrak™</option><option value="Souvenir">Souvenir</option></select></label>
+      <label class="campo" for="e-buscar"><span>Buscar por nombre</span>
+        <input type="search" id="e-buscar" placeholder="Asiimov, Dragon Lore…" autocomplete="off" spellcheck="false"></label>
       <div class="campo"><span>Rareza</span><div class="chips" id="e-rareza"></div></div>
     </div>
     <div class="explora">
@@ -735,6 +965,11 @@ footer .wrap { display: grid; gap: 6px; }
           <p class="meta" id="f-meta">La ficha muestra de dónde sale el skin, cuánto cuesta y en qué puesto del mercado está.</p>
           <dl id="f-datos"></dl>
           <p class="veredicto" id="f-veredicto"></p>
+          <div class="versiones-caja" id="f-versiones" hidden>
+            <span class="ceja" style="margin:0">Las versiones de este diseño</span>
+            <div class="versiones" id="f-versiones-lista"></div>
+          </div>
+          <p class="fijada" id="f-fijada" hidden>Ficha fijada. Tocá otro punto para cambiarla, o tocá acá para soltarla.</p>
         </div>
       </aside>
     </div>
@@ -754,7 +989,7 @@ footer .wrap { display: grid; gap: 6px; }
     <div class="cabeza">
       <div class="ceja"><span class="grado" style="background:var(--accent)"></span>Abrir la caja · Probá el modelo</div>
       <h2>Fabricá un skin y mirá en qué puesto lo pone el modelo</h2>
-      <p class="leer">Elegí sus atributos como si Valve lo lanzara mañana. La etiqueta muestra el puesto que predice el modelo (0 es el skin más barato del mercado y 100, el más caro) y lo traduce a un precio del mercado de hoy, con un rango de ± {{MAE_CV}} puntos, el error típico en validación. Ojo: con colecciones recién salidas el error es mayor y va para arriba (en la prueba final, {{MAE_TEST}} puntos de error y {{SESGO_TEST0}} puestos de más en promedio), así que para un skin que sale mañana, el puesto real probablemente quede por debajo de la etiqueta. Si cargás algo que el modelo nunca vio, la etiqueta lo avisa.</p>
+      <p class="leer">Elegí sus atributos como si Valve lo lanzara mañana. La etiqueta muestra el puesto que predice el modelo (0 es el skin más barato del mercado y 100, el más caro) y lo traduce a un precio del mercado de hoy, con un rango de ± {{MAE_CV}} puntos, el error típico en validación. Ojo: con colecciones recién salidas el error es mayor y va para arriba (en la prueba final, {{MAE_TEST}} puntos de error y {{SESGO_TEST0}} puestos de más en promedio), así que para un skin que sale mañana, el puesto real probablemente quede por debajo de la etiqueta. Si cargás algo que el modelo nunca vio, la etiqueta lo avisa. Debajo, como control, la regresión lineal hace su cuenta a la vista: podés abrirla y ver cuánto suma cada atributo.</p>
       <p class="leer">La vitrina muestra en vivo un <b>diseño real</b> con esos atributos, con la imagen de Steam para el exterior elegido y el color de su rareza. El modelo no mira el diseño (sólo los atributos), así que «Ver otro diseño» cambia la imagen pero no la predicción.</p>
     </div>
     <div class="taller">
@@ -781,7 +1016,7 @@ footer .wrap { display: grid; gap: 6px; }
           <div class="vitrina-top"><span class="vitrina-rareza" id="v-rareza"></span><span class="sello-v" id="v-sello" hidden></span></div>
           <div class="vitrina-img" id="v-marco">
             <img id="v-img-a" alt="" decoding="async"><img id="v-img-b" alt="" decoding="async">
-            <div class="vitrina-vacia" id="v-vacia" hidden>Corré <code>imagenes.py</code> para ver los skins.</div>
+            <div class="vitrina-vacia" id="v-vacia" hidden>Corré <code>descargar_estaticos.py</code> para ver los skins.</div>
           </div>
           <div class="vitrina-nombre" id="v-nombre"></div>
           <div class="floatbar" id="v-float" aria-hidden="true">
@@ -793,13 +1028,29 @@ footer .wrap { display: grid; gap: 6px; }
           <p class="vitrina-nota" id="v-nota"></p>
           <div class="vitrina-acciones"><button type="button" class="boton chico" id="v-otro">Ver otro diseño con estos atributos</button></div>
         </div>
-        <div class="etiqueta" aria-live="polite">
+        <div class="etiqueta" id="etiqueta" aria-live="polite">
           <span class="chico">Puesto predicho en el mercado</span>
           <span class="grande" id="t-pred">—</span>
           <span class="precio" id="t-precio">—</span>
           <p id="t-frase"></p>
         </div>
+        <div class="formula" aria-live="polite">
+          <div class="formula-cab">
+            <span>Control: la <b>regresión lineal</b>, calculada con su fórmula escrita en esta página</span>
+            <span class="formula-valor" id="f-ridge">—</span>
+          </div>
+          <details>
+            <summary>Ver la cuenta</summary>
+            <div class="tabla"><table class="cuenta"><tbody id="f-cuenta"></tbody></table></div>
+            <p class="pie">Cada atributo suma o resta puestos. Rareza y exterior van estandarizados (se les resta su promedio y se dividen por su desvío) y la dificultad de caja lleva además un indicador de «no es de caja». Son los {{N_COEF}} números de la regresión lineal de la comparación, reentrenada con los {{FILAS}} skins.</p>
+          </details>
+        </div>
         <div class="avisos" id="t-avisos"></div>
+        <div class="parecidos">
+          <h4>Skins reales con estos atributos</h4>
+          <p class="muted" style="font-size:.84rem">Misma arma, rareza, exterior y variante, primero los del mismo origen. Tocá uno para copiarlo y comparar su precio real con el del modelo.</p>
+          <div class="tarjetas-skin" id="p-parecidos"></div>
+        </div>
       </div>
     </div>
     <div class="figura" style="margin-top:18px"><div id="g-proba" class="grafico" role="img" aria-label="Escalera del mercado con la posición predicha del skin fabricado"></div>
@@ -808,7 +1059,7 @@ footer .wrap { display: grid; gap: 6px; }
       <summary>Cómo llega el modelo a esta página</summary>
       <div class="sabemos-cuerpo">
         <p>El modelo es el {{ELEGIDO}} del notebook, reentrenado con los {{FILAS}} skins (como el <code>modelo_percentil_cs2.joblib</code> de la sección 12). En el navegador no corre Python, así que <code>build_app.py</code> le pide al modelo la predicción de <b>cada combinación posible</b> de arma, rareza, exterior, origen y variante ({{N_GRILLA_APP}} casos) y la página la busca: no hay ninguna fórmula aproximada. La única simplificación es la dificultad de drop, que para los ítems de caja va en tres niveles (los cuantiles 15, 50 y 85 de los ítems reales con la misma rareza, exterior y variante).</p>
-        <p><b>Por qué una tabla y no una fórmula.</b> En una página HTML no corre Python, y el instructivo pide que el modelo se pueda escribir adentro de la página. Acá todas las entradas son categorías ({{ARMAS_N}} armas, 6 rarezas, 5 exteriores, 4 orígenes, las variantes y 3 niveles de dificultad), así que el modelo sólo puede recibir {{N_GRILLA_APP}} casos distintos. La tabla con sus {{N_GRILLA_APP}} respuestas <b>es</b> la función completa del modelo, escrita adentro de la página: no hay ningún caso que el usuario pueda cargar y que no esté calculado. La alternativa que admite el instructivo, un modelo que se escribe como fórmula y queda a menos de un desvío del mejor, también existía: la regresión lineal saca R² {{R2_RIDGE}} en validación, {{DIF_RIDGE}} menos que el {{ELEGIDO}} ({{R2_ELEGIDO_DEF}} ± {{DESVIO_ELEGIDO}}). No la usamos porque nuestra regla para elegir era que el modelo más complejo reemplaza a la lineal si le gana pedazo por pedazo, y le ganó en los cuatro.</p>
+        <p><b>Por qué una tabla y no una fórmula.</b> En una página HTML no corre Python, y el instructivo pide que el modelo se pueda escribir adentro de la página. Acá todas las entradas son categorías ({{ARMAS_N}} armas, 6 rarezas, 5 exteriores, 4 orígenes, las variantes y 3 niveles de dificultad), así que el modelo sólo puede recibir {{N_GRILLA_APP}} casos distintos. La tabla con sus {{N_GRILLA_APP}} respuestas <b>es</b> la función completa del modelo, escrita adentro de la página: no hay ningún caso que el usuario pueda cargar y que no esté calculado. La alternativa que admite el instructivo, un modelo que se escribe como fórmula y queda a menos de un desvío del mejor, está en la página: la <b>regresión lineal</b> del recuadro de control, que saca R² {{R2_RIDGE}} en validación, {{DIF_RIDGE}} menos que el {{ELEGIDO}} ({{R2_ELEGIDO_DEF}} ± {{DESVIO_ELEGIDO}}), y viaja como sus {{N_COEF}} coeficientes: la cuenta la hace el navegador, y <code>build_app.py</code> comprueba que da lo mismo que scikit-learn en los {{N_GRILLA_APP}} casos. La etiqueta grande sigue siendo el {{ELEGIDO}} porque nuestra regla para elegir era que el modelo más complejo reemplaza a la lineal si le gana pedazo por pedazo por más que el desvío de la diferencia, y le ganó.</p>
         <p>Las variantes posibles dependen del origen, como en el juego: los ítems de caja y de mapa pueden ser normales o StatTrak; los de paquetes de torneo son siempre Souvenir. Si la combinación de arma y rareza, o de origen y rareza, no aparece en los datos, la etiqueta avisa que el modelo nunca vio nada parecido.</p>
       </div>
     </details>
@@ -841,6 +1092,9 @@ footer .wrap { display: grid; gap: 6px; }
   const vistas = {};
   const fmt = (x, d) => Number(x).toLocaleString("es-AR", { minimumFractionDigits: d, maximumFractionDigits: d });
   const usd = (x) => "USD " + fmt(x, x < 1000 ? 2 : 0);
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const movimientoReducido = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const sinVariante = (n) => n.replace(/^(StatTrak™ |Souvenir )/, "").replace(/ \([^)]*\)$/, "");
 
   function css(nombre) { return getComputedStyle(document.documentElement).getPropertyValue(nombre).trim(); }
   const MAYUSCULA = "upper(slice(datum.label, 0, 1)) + slice(datum.label, 1)";
@@ -853,6 +1107,7 @@ footer .wrap { display: grid; gap: 6px; }
               labelFont: "IBM Plex Sans, system-ui, sans-serif", titleFont: "IBM Plex Sans, system-ui, sans-serif", titleFontWeight: 500, labelFontSize: 11, titleFontSize: 11.5 },
       legend: { labelColor: ink, titleColor: muted, labelFont: "IBM Plex Sans, system-ui, sans-serif", labelLimit: 320, labelFontSize: 11.5 },
       text: { color: ink, font: "IBM Plex Sans, system-ui, sans-serif" },
+      point: { color: ink },
       rule: { color: ink },
       header: { labelColor: ink, titleColor: ink }
     };
@@ -913,11 +1168,12 @@ footer .wrap { display: grid; gap: 6px; }
     });
     vistas[nombre] = { view: r.view };
     if (estado) estado(r.view);
+    if (senales[nombre]) { Object.entries(senales[nombre]).forEach(([k, x]) => r.view.signal(k, x)); await r.view.runAsync(); }
     return r.view;
   }
 
   // ---------------------------------------------------------------- explorá
-  const filtros = { f_origen: "todos", f_rareza: -1, f_arma: "todas", f_var: "todas" };
+  const filtros = { f_origen: "todos", f_rareza: -1, f_arma: "todas", f_var: "todas", f_buscar: "" };
   function aplicarFiltros(view) {
     Object.entries(filtros).forEach(([k, v]) => view.signal(k, v));
     return view.runAsync();
@@ -938,7 +1194,41 @@ footer .wrap { display: grid; gap: 6px; }
     sa.addEventListener("change", () => { filtros.f_arma = sa.value; aplicarFiltros(vistas.explora.view); });
     const sv = document.getElementById("e-var");
     sv.addEventListener("change", () => { filtros.f_var = sv.value; aplicarFiltros(vistas.explora.view); });
+    const sb = document.getElementById("e-buscar");
+    let esperaBusca;
+    sb.addEventListener("input", () => {
+      clearTimeout(esperaBusca);
+      esperaBusca = setTimeout(() => { filtros.f_buscar = sb.value.trim().toLowerCase(); if (vistas.explora) aplicarFiltros(vistas.explora.view); }, 160);
+    });
   }
+  // las versiones de cada diseño (mismo arma y diseño, distinto exterior o variante)
+  const VERSIONES = new Map();
+  APP.SKINS.forEach((s, i) => { const c = s.a + "|" + sinVariante(s.n); if (!VERSIONES.has(c)) VERSIONES.set(c, []); VERSIONES.get(c).push(i); });
+  const ORDEN_VAR = { Normal: 0, StatTrak: 1, Souvenir: 2 };
+  VERSIONES.forEach((l) => l.sort((x, y) => (ORDEN_VAR[APP.SKINS[x].v] - ORDEN_VAR[APP.SKINS[y].v]) || (APP.SKINS[x].w - APP.SKINS[y].w)));
+  let fijada = null;   // con un clic la ficha queda fija y el mouse deja de cambiarla
+  function pintarVersiones(d) {
+    const lista = VERSIONES.get(d.a + "|" + sinVariante(d.n)) || [];
+    const caja = document.getElementById("f-versiones");
+    caja.hidden = lista.length < 2;
+    if (lista.length < 2) return;
+    document.getElementById("f-versiones-lista").innerHTML = lista.map((i) => {
+      const s = APP.SKINS[i];
+      return `<button type="button" class="version" data-i="${i}" aria-pressed="${s === d}">
+        <span>${s.v === "Normal" ? "" : (s.v === "StatTrak" ? "StatTrak™ · " : "Souvenir · ")}${EXTERIORES[s.w]}</span><span class="vp">${usd(s.p)}</span>
+        <span class="vb" aria-hidden="true"><i style="left:${s.q}%;--c:${APP.COL_RAREZA[s.r]}"></i></span></button>`;
+    }).join("");
+  }
+  document.getElementById("f-versiones-lista").addEventListener("click", (ev) => {
+    const b = ev.target.closest(".version"); if (!b) return;
+    fijar(APP.SKINS[Number(b.dataset.i)]);
+  });
+  function fijar(d) {
+    fijada = d;
+    document.getElementById("f-fijada").hidden = !d;
+    if (d) mostrarFicha(d);
+  }
+  document.getElementById("f-fijada").addEventListener("click", () => fijar(null));
   const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
   function mostrarFicha(d) {
     const ficha = document.getElementById("ficha");
@@ -958,6 +1248,7 @@ footer .wrap { display: grid; gap: 6px; }
     if (d.o === "drop de mapa" && d.f >= APP.ARMORY_DESDE) frases.push("Es de una colección del Armory, que se canjea con un pase: en general sus skins abundan y valen menos que los de mapa viejos.");
     frases.push(`El modelo, sin haber visto su colección, lo estimaba en ${usd(d.ph)}.`);
     document.getElementById("f-veredicto").textContent = frases.join(" ");
+    pintarVersiones(d);
   }
 
   // ---------------------------------------------------------------- fabricá un skin
@@ -994,7 +1285,8 @@ footer .wrap { display: grid; gap: 6px; }
   const FLOAT_MEDIO = [0.035, 0.11, 0.265, 0.415, 0.725];   // el medio del rango de float de cada exterior
   const EXT_CORTO = ["FN", "MW", "FT", "WW", "BS"];
   const vitrina = { lista: [], pos: 0, fijo: null, capa: 0, src: "" };
-  const rutaImg = (i) => (i >= 0 && APP.IMAGENES[i]) ? "img/" + APP.IMAGENES[i] : "";
+  // Una ruta dentro de docs/img/, o la dirección completa de la imagen en Steam.
+  const rutaImg = (i) => (i >= 0 && APP.IMAGENES[i]) ? (/^https?:/.test(APP.IMAGENES[i]) ? APP.IMAGENES[i] : "img/" + APP.IMAGENES[i]) : "";
   function candidatos() {
     const mismos = APP.DISENOS.map((d, i) => [d, i]).filter(([d]) => d.a === caso.arma && d.r === caso.r);
     if (mismos.length) {
@@ -1049,6 +1341,33 @@ footer .wrap { display: grid; gap: 6px; }
   }
   document.getElementById("v-otro").addEventListener("click", () => { vitrina.pos = (vitrina.pos + 1) % vitrina.lista.length; pintarVitrina(); });
 
+  // ---------------------------------------------------------------- la fórmula de la regresión lineal
+  function ridge(origen) {
+    const F = APP.FORMULA, souv = origen === "paquete souvenir" || origen === "sin identificar";
+    const est = (x, [m, s, c]) => c * (x - m) / s;
+    const nl = origen === "caja" ? APP.NL_NIVEL[`${caso.r}|${caso.w}|${caso.st}|${caso.nivel}`] : null;
+    const falta = nl == null;
+    const dif = F.nl.c[0] * ((falta ? F.nl.med : nl) - F.nl.m[0]) / F.nl.s[0] + F.nl.c[1] * ((falta ? 1 : 0) - F.nl.m[1]) / F.nl.s[1];
+    const terminos = [
+      ["Base", F.b],
+      [`Rareza: ${RAREZAS[caso.r]}`, est(caso.r, F.num[0])],
+      [`Exterior: ${EXTERIORES[caso.w]}`, est(caso.w, F.num[1])],
+      [falta ? "Dificultad de caja: no es de caja" : `Dificultad de caja: ${NIVELES[caso.nivel].toLowerCase()}`, dif],
+      ["StatTrak™", F.st * caso.st], ["Souvenir", F.sv * (souv ? 1 : 0)],
+      [`Arma: ${APP.ARMAS[caso.arma]}`, F.arma[APP.ARMAS[caso.arma]]],
+      [`Origen: ${origen}`, F.origen[origen]]
+    ];
+    const suma = terminos.reduce((a, [, v]) => a + v, 0);
+    return { y: Math.min(100, Math.max(0, suma)), suma, terminos };
+  }
+  const conSigno = (v) => (v >= 0 ? "+" : "−") + fmt(Math.abs(v), 1);
+  function pintarFormula(origen) {
+    const r = ridge(origen);
+    document.getElementById("f-ridge").textContent = `${fmt(r.y, 0)} / 100 · ${usd(precioDe(r.y))}`;
+    document.getElementById("f-cuenta").innerHTML = r.terminos.map(([t, v], i) =>
+      `<tr><td>${esc(t)}</td><td>${i === 0 ? fmt(v, 1) : conSigno(v)}</td></tr>`).join("") +
+      `<tr class="total"><td>Puesto${r.suma < 0 || r.suma > 100 ? ` (la suma da ${fmt(r.suma, 1)}; se recorta entre 0 y 100)` : ""}</td><td>${fmt(r.y, 1)}</td></tr>`;
+  }
   function precioDe(p) { return APP.CUANTILES[Math.max(0, Math.min(1000, Math.round(p * 10)))]; }
   function actualizar(real) {
     const origen = APP.ORIGENES[caso.o];
@@ -1086,6 +1405,25 @@ footer .wrap { display: grid; gap: 6px; }
     else if (real === undefined) { pr.hidden = true; }
     const v = vistas.proba && vistas.proba.view;
     if (v) { v.signal("pred", pred); v.signal("lo", lo); v.signal("hi", hi); v.runAsync(); }
+    const et = document.getElementById("etiqueta");
+    et.classList.remove("pulso"); void et.offsetWidth; et.classList.add("pulso");
+    pintarParecidos(origen);
+    pintarFormula(origen);
+  }
+  // skins reales con la misma arma, rareza, exterior y variante (primero los del mismo origen)
+  function pintarParecidos(origen) {
+    const souv = origen === "paquete souvenir" || origen === "sin identificar";
+    const variante = souv ? "Souvenir" : (caso.st ? "StatTrak" : "Normal");
+    const arma = APP.ARMAS[caso.arma], iguales = [];
+    APP.SKINS.forEach((s, i) => {
+      if (s.a === arma && s.r === caso.r && s.w === caso.w && s.v === variante) iguales.push({ i, mismo: s.o === origen });
+    });
+    iguales.sort((a, b) => (b.mismo - a.mismo) || (APP.SKINS[a.i].p - APP.SKINS[b.i].p));
+    document.getElementById("p-parecidos").innerHTML = iguales.length ? iguales.slice(0, 6).map(({ i, mismo }) => {
+      const s = APP.SKINS[i];
+      return `<button type="button" class="tskin" data-i="${i}">${fotoSkin(i)}<span class="n1">${esc(sinVariante(s.n))}</span>
+        <span class="n2">${usd(s.p)} · puesto ${fmt(s.q, 0)}${mismo ? "" : " · otro origen"}</span></button>`;
+    }).join("") : '<p class="muted" style="font-size:.86rem">No hay ningún skin real con esta combinación exacta: el modelo está prediciendo algo que no existe.</p>';
   }
   const infoNivel = document.getElementById("info-nivel");
   const ayudaNivel = document.getElementById("ayuda-nivel");
@@ -1094,6 +1432,14 @@ footer .wrap { display: grid; gap: 6px; }
   document.addEventListener("click", () => ayudaNivel.classList.remove("abierta"));
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") ayudaNivel.classList.remove("abierta"); });
 
+  // copia los atributos de un skin real a la mesa, y la vitrina muestra justo ese diseño
+  function copiar(d) {
+    Object.assign(caso, { arma: APP.ARMAS.indexOf(d.a), r: d.r, w: d.w, o: APP.ORIGENES.indexOf(d.o), st: d.v === "StatTrak" ? 1 : 0, nivel: 1 });
+    const patron = (d.n.split(" | ")[1] || "").replace(/ \([^)]*\)$/, "");
+    const k = APP.DISENOS.findIndex((x) => x.a === caso.arma && x.r === d.r && x.d === patron);
+    vitrina.fijo = k >= 0 ? k : null;
+    actualizar(d);
+  }
   function armarMesa() {
     const sa = document.getElementById("p-arma");
     APP.ARMAS.forEach((a, i) => sa.add(new Option(a, String(i))));
@@ -1101,50 +1447,323 @@ footer .wrap { display: grid; gap: 6px; }
     const so = document.getElementById("p-origen");
     APP.ORIGENES.forEach((o, i) => so.add(new Option(o[0].toUpperCase() + o.slice(1), String(i))));
     so.addEventListener("change", () => { caso.o = Number(so.value); actualizar(); });
-    document.getElementById("p-azar").addEventListener("click", () => {
-      const d = APP.SKINS[Math.floor(Math.random() * APP.SKINS.length)];
-      Object.assign(caso, { arma: APP.ARMAS.indexOf(d.a), r: d.r, w: d.w, o: APP.ORIGENES.indexOf(d.o), st: d.v === "StatTrak" ? 1 : 0, nivel: 1 });
-      // la vitrina muestra justo ese diseño
-      const patron = (d.n.split(" | ")[1] || "").replace(/ \([^)]*\)$/, "");
-      const k = APP.DISENOS.findIndex((x) => x.a === caso.arma && x.r === d.r && x.d === patron);
-      vitrina.fijo = k >= 0 ? k : null;
-      actualizar(d);
+    document.getElementById("p-azar").addEventListener("click", () => copiar(APP.SKINS[Math.floor(Math.random() * APP.SKINS.length)]));
+    document.getElementById("p-parecidos").addEventListener("click", (ev) => {
+      const b = ev.target.closest(".tskin"); if (b) copiar(APP.SKINS[Number(b.dataset.i)]);
     });
+  }
+
+  // ---------------------------------------------------------------- fotos de skins (portada, demos y Fabricá)
+  // k: una fila de APP.SKINS. Si no hay imagen (o no carga), queda el nombre sobre el color de la rareza.
+  function fotoSkin(k, clase) {
+    const s = APP.SKINS[k];
+    if (!s) return `<div class="foto sin-imagen ${clase || ""}"><span class="respaldo">—</span></div>`;
+    const src = rutaImg(s.i);
+    return `<div class="foto ${src ? "" : "sin-imagen"} ${clase || ""}" style="--c:${APP.COL_RAREZA[s.r]}">` +
+      (src ? `<img src="${esc(src)}" alt="${esc(s.n)}" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('sin-imagen')">` : "") +
+      `<span class="respaldo">${esc(sinVariante(s.n))}</span></div>`;
   }
 
   // ---------------------------------------------------------------- portada: seis AK-47 reales
   function armarGancho() {
-    const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-    document.getElementById("gancho").innerHTML = APP.GANCHO.map((k) => {
-      const s = APP.SKINS[k], src = rutaImg(s.i);
-      const img = src ? `<img src="${src}" alt="${esc(s.n)}" loading="lazy" decoding="async">` : `<span>${esc(s.n.split(" (")[0])}</span>`;
-      return `<div class="item"><div class="foto" style="--c:${APP.COL_RAREZA[s.r]}">${img}</div>
-        <span class="valor-usd">${usd(s.p)}</span><span class="n">${esc(s.n)}</span></div>`;
+    document.getElementById("gancho").innerHTML = APP.GANCHO.map((k, i) => {
+      const s = APP.SKINS[k];
+      return `<div class="item" style="transition-delay:${i * 110}ms">${fotoSkin(k)}
+        <span class="precio-tag">${usd(s.p)}</span><span class="nombre">${esc(s.n)}</span></div>`;
     }).join("");
   }
+
+  // ---------------------------------------------------------------- CS2 en cinco minutos · 1 · el nombre
+  const I = APP.INTRO;
+  function armarAnatomia() {
+    const e = I.exterior;
+    const ejemplo = e.k_st[2] >= 0 ? e.k_st[2] : e.k[2];
+    const partes = [
+      { t: "StatTrak™", c: "#cf6a32", x: "<b>La variante.</b> StatTrak™ cuenta las bajas que hacés con el arma. Puede ser normal (el nombre no dice nada), StatTrak™ o Souvenir." },
+      { t: e.arma, c: css("--muted"), x: `<b>El arma.</b> Hay ${APP.ARMAS.length} armas en los datos: fusiles, pistolas, subfusiles y pesadas. El AK-47 es de las más usadas y de las que más se paga.` },
+      { t: "| " + e.pintura, c: APP.COL_RAREZA[e.r], x: `<b>El diseño y su rareza.</b> «${esc(e.pintura)}» es un diseño <b>${RAREZAS[e.r]}</b>: la rareza se ve en su color. Viene de la colección ${esc(e.col)}.` },
+      { t: "(Field-Tested)", c: css("--ink"), x: "<b>El exterior.</b> Qué tan gastada está la pintura: Factory New, Minimal Wear, Field-Tested, Well-Worn o Battle-Scarred (punto 3)." }
+    ];
+    const cont = document.getElementById("anatomia"), texto = document.getElementById("anatomia-texto");
+    cont.innerHTML = partes.map((p, i) => `<button type="button" class="parte" style="--c:${p.c}" aria-pressed="${i === 2}" data-i="${i}">${esc(p.t)}</button>`).join("");
+    const elegir = (i) => { [...cont.children].forEach((b, j) => b.setAttribute("aria-pressed", String(i === j))); texto.innerHTML = partes[i].x; };
+    cont.addEventListener("click", (ev) => { const b = ev.target.closest(".parte"); if (b) elegir(Number(b.dataset.i)); });
+    elegir(2);
+    const s = APP.SKINS[ejemplo];
+    document.getElementById("anatomia-foto").innerHTML = fotoSkin(ejemplo, "grande") +
+      (s ? `<p class="pie">${esc(s.n)}: ${usd(s.p)} en Steam el {{SNAPSHOT}}.</p>` : "");
+  }
+
+  // ---------------------------------------------------------------- 2 · la escalera de rarezas
+  function armarEscalera() {
+    const max = Math.log10(Math.max(...I.escalera.map((r) => r.usd)) * 1.15), min = Math.log10(0.5);
+    document.getElementById("escalera").innerHTML = I.escalera.map((r, i) => {
+      const w = Math.max(6, 100 * (Math.log10(r.usd) - min) / (max - min));
+      return `<div class="escalon" style="--c:${APP.COL_RAREZA[i]}"><h4>${RAREZAS_CORTAS[i]}</h4>${fotoSkin(r.k)}
+        <span class="dato">${esc(sinVariante(APP.SKINS[r.k].n))}</span>
+        <span class="dato">En una caja: <b>${r.prob == null ? "no sale" : fmt(r.prob, 2) + " %"}</b></span>
+        <span class="dato">Precio típico: <b>${usd(r.usd)}</b></span>
+        <div class="barrita" aria-hidden="true"><i style="--w:${w.toFixed(0)}%"></i></div></div>`;
+    }).join("");
+  }
+
+  // ---------------------------------------------------------------- 3 · el exterior (la barra de desgaste)
+  const FLOAT_TRAMOS = [[0, 0.07], [0.07, 0.15], [0.15, 0.38], [0.38, 0.45], [0.45, 1]];
+  function armarExterior() {
+    const e = I.exterior;
+    const marco = document.getElementById("ext-foto");
+    marco.style.setProperty("--c", APP.COL_RAREZA[e.r]);
+    document.getElementById("ext-nombre").textContent = e.nombre;
+    const regla = document.getElementById("ext-regla");
+    regla.innerHTML = FLOAT_TRAMOS.map(([a, b], i) => `<div class="tramo" style="left:${a * 100}%;width:calc(${(b - a) * 100}% - 2px)"></div>`).join("") +
+      [0, 0.07, 0.15, 0.38, 0.45, 1].map((v) => `<span class="lbl" style="left:${v * 100}%">${String(v).replace(".", ",")}</span>`).join("");
+    const control = document.getElementById("ext-control");
+    let srcActual = null;
+    const pintar = () => {
+      const w = Number(control.value);
+      // la imagen de ese exterior, o la más cercana que haya
+      let k = -1;
+      for (let d = 0; d < 5 && k < 0; d++) for (const ww of [w - d, w + d]) if (k < 0 && ww >= 0 && ww < 5 && e.k[ww] >= 0) k = e.k[ww];
+      const src = k >= 0 ? rutaImg(APP.SKINS[k].i) : "";
+      if (src !== srcActual) {
+        srcActual = src;
+        marco.classList.toggle("sin-imagen", !src);
+        marco.innerHTML = (src ? `<img src="${esc(src)}" alt="${esc(e.nombre)}" decoding="async" onerror="this.parentNode.classList.add('sin-imagen')">` : "") +
+          `<span class="respaldo">${esc(e.nombre)}</span><div class="rayas"></div>`;
+      }
+      document.getElementById("ext-etq").textContent = `${EXTERIORES[w]} (${EXT_CORTO[w]})`;
+      document.getElementById("ext-p-normal").textContent = e.normal[w] == null ? "no hay" : usd(e.normal[w]);
+      document.getElementById("ext-p-st").textContent = e.stattrak[w] == null ? "no hay" : usd(e.stattrak[w]);
+      regla.querySelectorAll(".tramo").forEach((t, i) => t.classList.toggle("on", i === w));
+      marco.querySelector(".rayas").style.opacity = [0, 0.18, 0.42, 0.62, 0.85][w];
+      const img = marco.querySelector("img");
+      if (img) img.style.filter = `drop-shadow(0 6px 10px rgb(0 0 0 / .45)) saturate(${[1, 0.92, 0.8, 0.7, 0.55][w]}) contrast(${[1, 0.98, 0.95, 0.92, 0.88][w]}) brightness(${[1, 0.97, 0.93, 0.9, 0.85][w]})`;
+      const [fm, fx] = e.float, base = e.normal.find((p) => p != null);
+      let texto;
+      if (e.normal[w] == null) texto = `Este diseño no se vende en ${EXTERIORES[w]}: su rango de desgaste no llega a ese tramo.`;
+      else if (w === 0 && fm != null && fm > 0.03 && e.normal[2] != null)
+        texto = `Este diseño sólo sale con desgaste entre ${String(fm).replace(".", ",")} y ${String(fx).replace(".", ",")}, así que Factory New (menos de 0,07) es muy difícil de conseguir: vale ${fmt(e.normal[0] / e.normal[2], 1)} veces lo que uno Field-Tested.`;
+      else if (w === 0) texto = `Factory New es el exterior más nuevo, y casi siempre el más caro. Mové el control para gastarlo y mirá cómo baja el precio.`;
+      else texto = `Del exterior más nuevo a ${EXTERIORES[w]}, el precio pasa de ${usd(base)} a ${usd(e.normal[w])}. La versión StatTrak™ siempre cuesta más.`;
+      document.getElementById("ext-explica").textContent = texto;
+    };
+    control.addEventListener("input", pintar);
+    pintar();
+  }
+
+  // ---------------------------------------------------------------- 4 · los orígenes y la caja
+  const TXT_ORIGEN = [
+    "Se abre con una llave paga y da un skin al azar, con las probabilidades de la escalera. Cada caja se discontinúa con el tiempo.",
+    "Skins sin caja. Hasta 2024, colecciones de mapa que el juego regalaba por jugar y hoy casi no se reparten. Desde el {{ARM_FECHA}}, también las del Armory, que se canjean con un pase.",
+    "Paquetes de los torneos oficiales. Todo lo que traen es Souvenir.",
+    "Versiones Souvenir que el catálogo no asocia a ningún paquete conocido."
+  ];
+  function armarOrigenes() {
+    document.getElementById("origenes").innerHTML = I.origenes.map((o, i) => {
+      const ico = o.icono ? `<img class="icono" src="${esc(o.icono)}" alt="" loading="lazy" onerror="this.remove()">` : "";
+      const epocas = o.epocas ? `<div class="epocas">
+          <div style="--c:${APP.COL_ORIGEN[1]}"><span>Antes del Armory</span><b>${usd(o.epocas[0].usd)}</b><span>${fmt(o.epocas[0].skins, 0)} skins · ${o.epocas[0].colecciones} col.</span></div>
+          <div style="--c:${APP.COL_ARMORY}"><span>Del Armory</span><b>${usd(o.epocas[1].usd)}</b><span>${fmt(o.epocas[1].skins, 0)} skins · ${o.epocas[1].colecciones} col.</span></div>
+        </div><p style="font-size:.84rem">Para el modelo, las dos son la misma etiqueta.</p>` : "";
+      return `<div class="tarjeta origen" style="--c:${APP.COL_ORIGEN[i]}">
+        <h4>${ico}<span>${esc(APP.ORIGENES[i][0].toUpperCase() + APP.ORIGENES[i].slice(1))}</span></h4>
+        <p>${TXT_ORIGEN[i]}</p>
+        <span class="cifra-o">${usd(o.usd)}</span>
+        <span class="muted" style="font-size:.8rem">precio típico · ${fmt(o.skins, 0)} skins en ${o.colecciones} colecciones</span>${epocas}</div>`;
+    }).join("");
+  }
+  function armarCaja() {
+    const c = I.caja;
+    const marco = document.getElementById("caja-foto");
+    marco.style.setProperty("--c", css("--muted"));
+    marco.classList.toggle("sin-imagen", !c.img);
+    marco.innerHTML = (c.img ? `<img src="${esc(c.img)}" alt="${esc(c.nombre)}" loading="lazy" onerror="this.parentNode.classList.add('sin-imagen')">` : "") +
+      `<span class="respaldo">${esc(c.nombre)}</span>`;
+    document.getElementById("caja-titulo").textContent = `Probá abrir una ${c.nombre}`;
+    const porRareza = {};
+    c.items.forEach((it) => { (porRareza[it.r] = porRareza[it.r] || []).push(it); });
+    const probs = [[2, 79.92], [3, 15.98], [4, 3.2], [5, 0.64]].filter(([r]) => porRareza[r]);
+    const total = probs.reduce((a, [, p]) => a + p, 0);
+    const sortear = () => {
+      let x = Math.random() * total;
+      for (const [r, p] of probs) { if ((x -= p) <= 0) { const l = porRareza[r]; return l[Math.floor(Math.random() * l.length)]; } }
+      return porRareza[probs[0][0]][0];
+    };
+    const cinta = document.getElementById("ruleta"), boton = document.getElementById("abrir-caja"), salida = document.getElementById("caja-resultado");
+    if (!probs.length) { boton.hidden = true; return; }
+    const llenar = (final) => { cinta.innerHTML = Array.from({ length: 40 }, (_, i) => i === 34 ? final : sortear()).map((it) => fotoSkin(it.k)).join(""); };
+    llenar(sortear());
+    boton.addEventListener("click", () => {
+      const premio = sortear();
+      llenar(premio);
+      cinta.style.transition = "none"; cinta.style.transform = "translateX(0)";
+      boton.disabled = true; salida.textContent = "";
+      const ancho = 126, centro = cinta.parentNode.clientWidth / 2;
+      const destino = -(34 * ancho + 8 + 60 - centro + (Math.random() * 60 - 30));
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        cinta.style.transition = movimientoReducido ? "none" : "transform 4.2s cubic-bezier(.12,.75,.15,1)";
+        cinta.style.transform = `translateX(${destino}px)`;
+      }));
+      const fin = () => {
+        boton.disabled = false; boton.textContent = "Abrir otra";
+        const s = APP.SKINS[premio.k];
+        salida.innerHTML = `Te tocó <b style="color:${APP.COL_RAREZA[premio.r]}">${esc(sinVariante(s.n))}</b> (${RAREZAS_CORTAS[premio.r]}): vale ${usd(premio.p)} en ${EXTERIORES[premio.w]}. ${premio.p < 2.5 ? "Menos que la llave." : "¡Más que la llave!"}`;
+      };
+      if (movimientoReducido) fin(); else setTimeout(fin, 4300);
+    });
+  }
+
+  // ---------------------------------------------------------------- 5 · la fila del mercado
+  function armarMercado() {
+    const pista = document.getElementById("pista");
+    pista.insertAdjacentHTML("beforeend", I.fila.map((k) => { const s = APP.SKINS[k];
+      return `<div class="ej" style="left:${s.q}%;transform:translateX(-${s.q}%)">${fotoSkin(k)}<span>${usd(s.p)} · puesto ${fmt(s.q, 0)}</span></div>`; }).join(""));
+    const Q = APP.CUANTILES, lmin = Math.log10(Q[0]), lmax = Math.log10(Q[1000]);
+    const control = document.getElementById("precio-control"), cursor = document.getElementById("pista-cursor");
+    const lectura = document.getElementById("mercado-lectura");
+    const puesto = (p) => { let lo = 0, hi = 1000; while (lo < hi) { const m = (lo + hi) >> 1; if (Q[m] <= p) lo = m + 1; else hi = m; } return lo / 10; };
+    const pintar = () => {
+      const p = Math.pow(10, lmin + (lmax - lmin) * Number(control.value) / 1000);
+      const q = Math.min(100, puesto(p));
+      cursor.style.left = q + "%";
+      lectura.innerHTML = `Un skin de <b>${usd(p)}</b> queda en el <b>puesto ${fmt(q, 0)}</b>: es más caro que ${fmt(q, 0)} de cada 100 skins del mercado.`;
+    };
+    control.addEventListener("input", pintar);
+    pintar();
+  }
+
+  // ---------------------------------------------------------------- lo que encontramos, en tres pasos
+  // Las señales de los gráficos se guardan acá y se vuelven a poner cada vez que se redibujan.
+  const senales = {};
+  function senal(nombre, valores) {
+    senales[nombre] = Object.assign(senales[nombre] || {}, valores);
+    const v = vistas[nombre] && vistas[nombre].view;
+    if (!v) return Promise.resolve();
+    Object.entries(valores).forEach(([k, x]) => v.signal(k, x));
+    return v.runAsync();
+  }
+  const NARRA = {
+    1: "Si juntamos todos los skins, la rareza casi ordena el precio… salvo un tropiezo: los <b>Mil-Spec</b> (puesto {{MED_TODOS_MIL}}) quedan más baratos que los <b>Consumer</b> (puesto {{MED_TODOS_CONS}}), que son la rareza más baja. ¿Cómo puede ser?",
+    2: "Los Consumer e Industrial <b>nunca salen de cajas</b>: salen de colecciones de mapa y de paquetes de torneo, que valen más. Separando por cómo se consigue cada skin, <b>todas las líneas suben</b>: en caja, un Mil-Spec está en el puesto {{MED_CAJA_MIL}} y un Covert, en el {{MED_CAJA_COV}}. Por eso el modelo necesita el origen además de la rareza.",
+    3: "La línea «drop de mapa» escondía dos mundos. Las colecciones de antes del Armory están arriba; las del Armory, muy abajo: un Mil-Spec de antes está en el puesto <b>{{MED_CLAS_MIL}}</b> y uno del Armory, en el <b>{{MED_ARM_MIL}}</b>. Para el modelo, los dos son «drop de mapa»."
+  };
+  const CLAVE_H = {
+    1: "Todos juntos, la escalera tropieza en Mil-Spec.",
+    2: "Separados por cómo se consiguen, todas las líneas suben.",
+    3: "Dentro de cada forma de conseguirlo, todas las líneas suben; «drop de mapa» se parte en dos."
+  };
+  const LEYENDA = {
+    1: [["todos", 1]],
+    2: [["caja", 1], ["drop de mapa", 1], ["paquete souvenir", 1], ["sin identificar", 1], ["todos", 0]],
+    3: [["clasico", 1], ["armory", 1], ["caja", 0], ["paquete souvenir", 0], ["sin identificar", 0]]
+  };
+  let pasoActual = 3;
+  function irAPaso(p, sinPausa) {
+    pasoActual = p;
+    document.querySelectorAll(".stepper button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.paso) === p)));
+    const fig = document.getElementById("fig-hallazgo"), narra = document.getElementById("narra");
+    const pintar = () => {
+      narra.innerHTML = NARRA[p];
+      document.getElementById("clave-hallazgo").textContent = CLAVE_H[p];
+      document.getElementById("leyenda-hallazgo").innerHTML = LEYENDA[p].map(([k, on]) =>
+        `<span class="${on ? "" : "apagada"}"><i class="${k === "todos" ? "punteada" : ""}" style="--c:${APP.SERIE[k][1]}"></i>${APP.SERIE[k][0]}</span>`).join("");
+      senal("hallazgo", { paso: p });
+      fig.classList.remove("cambiando"); narra.style.opacity = 1;
+      document.getElementById("paso-sig").textContent = p < 3 ? "Siguiente paso →" : "Contarlo desde el paso 1";
+    };
+    if (sinPausa || movimientoReducido) { pintar(); return; }
+    fig.classList.add("cambiando"); narra.style.opacity = 0.3;
+    setTimeout(pintar, 180);
+  }
+  document.querySelectorAll(".stepper button").forEach((b) => b.addEventListener("click", () => irAPaso(Number(b.dataset.paso))));
+  document.getElementById("paso-sig").addEventListener("click", () => irAPaso(pasoActual < 3 ? pasoActual + 1 : 1));
+
+  // ---------------------------------------------------------------- el modelo · la nube con dos vistas
+  const MARCADOR = {
+    1: [["{{NUBE_TE_R2}}", "R² con las colecciones nuevas: explica mucho menos", "var(--ref)"],
+        ["{{NUBE_TE_ARRIBA}}", "de los skins quedan arriba de la línea: casi todos le parecen más caros", "var(--ref)"],
+        ["{{ARM_CARO}}", "de los del Armory (salmón) los pone más caros, en promedio {{ARM_SESGO}} puestos de más", "var(--armory)"]],
+    0: [["{{NUBE_TR_R2}}", "R² con las colecciones conocidas: explica la mayor parte del orden", "var(--ref)"],
+        ["{{NUBE_TR_ARRIBA}}", "quedan arriba de la línea: se equivoca parejo para los dos lados (sesgo {{NUBE_TR_SESGO}})", "var(--ref)"],
+        ["", "Cada skin lo predijo un modelo que no vio su colección. Acá no hay Armory: esas colecciones están todas en la prueba.", ""]]
+  };
+  const LEYENDA_NUBE = {
+    1: [["Skins de drop de mapa del Armory", APP.COL_ARMORY], ["Todos los demás de la prueba", APP.COL_GRIS]],
+    0: [["Skins de las colecciones conocidas", APP.COL_GRIS]]
+  };
+  const CLAVE_NUBE = {
+    1: "La nube salmón está casi toda arriba de la línea: el modelo la pone cara y es barata.",
+    0: "Con las colecciones conocidas, la nube sigue la línea: se equivoca parejo para los dos lados."
+  };
+  let vistaNube = 1;
+  function irAVista(v) {
+    vistaNube = v;
+    document.querySelectorAll(".alternar button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.vista) === v)));
+    document.getElementById("marcador-nube").innerHTML = MARCADOR[v].map(([n, t, c]) => n
+      ? `<div class="tarjeta" style="--c:${c}"><span class="grande-num">${n}</span><span>${t}</span></div>`
+      : `<p class="muted" style="font-size:.86rem">${t}</p>`).join("");
+    document.getElementById("leyenda-nube").innerHTML = LEYENDA_NUBE[v].map(([t, c]) => `<span><i class="punto" style="--c:${c}"></i>${t}</span>`).join("");
+    document.getElementById("clave-nube").textContent = CLAVE_NUBE[v];
+    const fig = document.getElementById("fig-nube");
+    fig.classList.add("cambiando");
+    senal("error", { vista: v }).then(() => fig.classList.remove("cambiando"));
+  }
+  document.querySelectorAll(".alternar button").forEach((b) => b.addEventListener("click", () => irAVista(Number(b.dataset.vista))));
 
   // ---------------------------------------------------------------- arranque
   async function todo() {
     await Promise.all([
-      dibujar("tira", "g-tira", "canvas"), dibujar("datos", "g-datos"), dibujar("precios", "g-precios"),
-      dibujar("hallazgo", "g-hallazgo", "canvas"), dibujar("armory_tiempo", "g-armory-tiempo"),
+      dibujar("datos", "g-datos"), dibujar("precios", "g-precios"),
+      dibujar("hallazgo", "g-hallazgo"), dibujar("armory_tiempo", "g-armory-tiempo"),
       dibujar("armory_rareza", "g-armory-rareza"), dibujar("particion", "g-particion"), dibujar("modelo", "g-modelo"),
       dibujar("error", "g-error", "canvas"), dibujar("armory", "g-armory"), dibujar("defensa", "g-defensa"),
       dibujar("comparacion", "g-comparacion"), dibujar("importancia", "g-importancia")
     ]);
     const ve = await dibujar("explora", "g-explora", "canvas");
     await aplicarFiltros(ve);
-    ve.addEventListener("click", (ev, item) => { if (item && item.datum && item.datum.n) mostrarFicha(item.datum); });
-    ve.addEventListener("mousemove", (ev, item) => { if (item && item.datum && item.datum.n) mostrarFicha(item.datum); });
+    const esSkin = (item) => item && item.datum && item.datum.n;
+    ve.addEventListener("click", (ev, item) => { if (esSkin(item)) fijar(item.datum); });
+    ve.addEventListener("mousemove", (ev, item) => { if (!fijada && esSkin(item)) mostrarFicha(item.datum); });
     await dibujar("proba", "g-proba", "canvas");
     actualizar(null);
   }
   armarGancho();
+  armarAnatomia(); armarEscalera(); armarExterior(); armarOrigenes(); armarCaja(); armarMercado();
   armarExplora();
   armarMesa();
   pintarMesa();
+  irAPaso(3, true); irAVista(1);
   todo();
 
+  // ---------------------------------------------------------------- animaciones de entrada (de la versión 1817)
+  document.querySelectorAll("#datos .figura, #datos .bloque, #datos .alerta, #hallazgo .bloque, #hallazgo .figura:not(.fundido), #modelo .bloque, #modelo .figura:not(.fundido)")
+    .forEach((el) => el.classList.add("revelar"));
+  const aparecen = document.querySelectorAll(".revelar, .gancho, .escalera");
+  if ("IntersectionObserver" in window && !movimientoReducido) {
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("visto"); io.unobserve(e.target); } }), { threshold: 0.12 });
+    aparecen.forEach((el) => io.observe(el));
+  } else aparecen.forEach((el) => el.classList.add("visto"));
+  // al imprimir o exportar a PDF, todo a la vista aunque no se haya bajado hasta ahí
+  window.addEventListener("beforeprint", () => aparecen.forEach((el) => el.classList.add("visto")));
+  // las tres cifras de la portada cuentan hasta su valor la primera vez que se ven
+  document.querySelectorAll(".cifra .valor").forEach((el) => {
+    const m = el.textContent.trim().match(/^(−|-)?(\d+)(?:,(\d+))?(.*)$/);
+    if (!m || movimientoReducido || !("IntersectionObserver" in window)) return;
+    const dec = m[3] ? m[3].length : 0, fin = Number((m[2] + "." + (m[3] || "0"))) * (m[1] ? -1 : 1), resto = m[4];
+    const final = el.textContent;
+    const io = new IntersectionObserver((es) => {
+      if (!es[0].isIntersecting) return; io.disconnect();
+      const t0 = performance.now();
+      const paso = (t) => { const k = Math.min(1, (t - t0) / 1100);
+        el.textContent = k < 1 ? fmt(fin * (1 - Math.pow(1 - k, 3)), dec) + resto : final; if (k < 1) requestAnimationFrame(paso); };
+      requestAnimationFrame(paso);
+    });
+    io.observe(el);
+  });
+
+  document.querySelectorAll("details.sabemos").forEach((d) => d.addEventListener("toggle", () => {
+    if (d.open && d.querySelector("#g-comparacion")) { dibujar("comparacion", "g-comparacion"); dibujar("importancia", "g-importancia"); }
+  }));
   let espera;
   const redibujar = () => { clearTimeout(espera); espera = setTimeout(todo, 250); };
   matchMedia("(prefers-color-scheme: light)").addEventListener("change", redibujar);
@@ -1155,6 +1774,12 @@ footer .wrap { display: grid; gap: 6px; }
   const columna = document.querySelector("main .wrap");
   let anchoColumna = columna.clientWidth;
   new ResizeObserver(() => { if (Math.abs(columna.clientWidth - anchoColumna) > 40) { anchoColumna = columna.clientWidth; redibujar(); } }).observe(columna);
+
+  // ---------------------------------------------------------------- CS2 en cinco minutos: los links lo abren
+  const juego = document.getElementById("juego");
+  const abrirJuego = () => { juego.open = true; };
+  document.querySelectorAll('a[href="#glosario"]').forEach((a) => a.addEventListener("click", abrirJuego));
+  if (location.hash === "#glosario") abrirJuego();
 
   // ---------------------------------------------------------------- índice lateral
   const lateral = document.getElementById("lateral");

@@ -370,6 +370,56 @@ VISTOS = {
 }
 CUANTILES_PRECIO = [round(float(np.quantile(MERCADO_TOTAL, k / 1000)), 2) for k in range(1001)]
 
+# ---------------------------------------------------------------- 7b · la fórmula de respaldo
+# El instructivo pide que, en una página HTML, el modelo de «Probá» se pueda escribir adentro como
+# fórmula. El Gradient Boosting viaja como la tabla completa de sus respuestas (arriba); además, la
+# página trae la regresión lineal de la comparación (Ridge, alpha=1, R² en validación a menos de un
+# desvío del elegido) escrita como fórmula: estos coeficientes, y la cuenta se hace en el navegador.
+ridge_app = armar_modelo(Ridge(alpha=1.0)).fit(df[COLUMNAS_X], df["q"])
+pipe_r = ridge_app.regressor_
+prep_r, coef_r = pipe_r.named_steps["prep"], pipe_r.named_steps["modelo"].coef_
+nombres_r = list(prep_r.get_feature_names_out())
+coef_de = dict(zip(nombres_r, coef_r))
+esc_ord = prep_r.named_transformers_["ordinales"].named_steps["escalar"]
+imp_pd = prep_r.named_transformers_["prob_drop"].named_steps["imputar"]
+esc_pd = prep_r.named_transformers_["prob_drop"].named_steps["escalar"]
+ohe = prep_r.named_transformers_["categoricas"]
+FORMULA = {
+    "b": float(pipe_r.named_steps["modelo"].intercept_),
+    "num": [[float(esc_ord.mean_[i]), float(esc_ord.scale_[i]), float(coef_de[f"ordinales__{c}"])]
+            for i, c in enumerate(COL_ORDINALES)],
+    "nl": {"med": float(imp_pd.statistics_[0]), "m": [float(x) for x in esc_pd.mean_], "s": [float(x) for x in esc_pd.scale_],
+           "c": [float(coef_de[n_]) for n_ in nombres_r if n_.startswith("prob_drop__")]},
+    "st": float(coef_de["booleanas__stattrak"]), "sv": float(coef_de["booleanas__souvenir"]),
+    "arma": {a: float(coef_de.get(f"categoricas__weapon_{a}", 0.0)) for a in ARMAS},
+    "origen": {o: float(coef_de.get(f"categoricas__origen_{o}", 0.0)) for o in ORIGENES},
+}
+# los valores de dificultad que usa cada nivel (son datos de entrada, no del modelo)
+NL_NIVEL = {f"{int(r.rarity_orden)}|{int(r.wear_orden)}|{int(r.stattrak)}|{int(r.nivel)}": round(float(r.neg_log_p_item), 6)
+            for r in grilla[grilla["origen"] == "caja"].itertuples()}
+
+
+def formula_ridge(fila):
+    """La misma cuenta que hace la página, para comprobar que da lo mismo que scikit-learn."""
+    y = FORMULA["b"]
+    for (m, s, c), x in zip(FORMULA["num"], (fila["rarity_orden"], fila["wear_orden"])):
+        y += c * (x - m) / s
+    nl = fila["neg_log_p_item"]
+    falta = pd.isna(nl)
+    for x, m, s, c in zip((FORMULA["nl"]["med"] if falta else nl, float(falta)), FORMULA["nl"]["m"], FORMULA["nl"]["s"], FORMULA["nl"]["c"]):
+        y += c * (x - m) / s
+    y += FORMULA["st"] * fila["stattrak"] + FORMULA["sv"] * fila["souvenir"]
+    y += FORMULA["arma"][fila["weapon"]] + FORMULA["origen"][fila["origen"]]
+    return min(100.0, max(0.0, y))
+
+
+assert len(FORMULA["nl"]["c"]) == 2, "se esperaba la dificultad y su indicador de faltante"
+pred_r = ridge_app.predict(grilla[COLUMNAS_X])
+assert np.allclose([formula_ridge(f) for f in grilla.to_dict(orient="records")], pred_r, atol=1e-6), \
+    "la fórmula escrita no da lo mismo que scikit-learn"
+N_COEF = len(coef_r) + 1
+print(f"fórmula de la regresión lineal: {N_COEF} números, coincide con scikit-learn en los {len(grilla)} casos")
+
 # ================================================================ 8 · hipótesis de la Entrega 2, recalculadas
 base = df[(df["stattrak"] == 0) & (df["souvenir"] == 0)]
 sv = df[df["souvenir"] == 1].groupby(["skin_id", "wear_orden"])["q"].first()
@@ -523,15 +573,31 @@ SKINS = pd.DataFrame({
     "l": lado,
 })
 
-# Imágenes (las baja imagenes.py a docs/img/). Cada fila apunta a un índice de IMAGENES, o -1.
+# Imágenes. Cada fila apunta a un índice de IMAGENES, o -1. Dos fuentes posibles:
+#  1) imagenes.py (versión 1654): data/imagenes_<snapshot>.json, nombre de mercado → archivo en docs/img/
+#  2) descargar_estaticos.py (versión 1817): una imagen por diseño (skin_id). Si la miniatura está en
+#     docs/img/skins/<skin_id>.png se usa la copia local; si no, la imagen oficial en los servidores de Steam.
 imagenes_ruta = ruta.with_name(f"imagenes_{SNAPSHOT}.json")
-IMAGEN_DE = json.loads(imagenes_ruta.read_text(encoding="utf-8")) if imagenes_ruta.exists() else {}
+catalogo_ruta = RAIZ / "data" / "estaticos" / "catalogo.json"
+if imagenes_ruta.exists():
+    IMAGEN_DE = json.loads(imagenes_ruta.read_text(encoding="utf-8"))
+elif catalogo_ruta.exists():
+    cat_disenos = json.loads(catalogo_ruta.read_text(encoding="utf-8"))["disenos"]
+    def img_diseno(sid):
+        if (Path(args.salida).parent / "img" / "skins" / f"{sid}.png").exists():
+            return f"skins/{sid}.png"
+        url = cat_disenos.get(sid, {}).get("imagen", "")
+        return url + ("/256fx256f" if "steamstatic" in url else "") if url else None
+    img_sid = {sid: img_diseno(sid) for sid in df["skin_id"].unique()}
+    IMAGEN_DE = {nom: img_sid[sid] for nom, sid in zip(df["market_hash_name"], df["skin_id"]) if img_sid.get(sid)}
+else:
+    IMAGEN_DE = {}
 IMAGENES = sorted(set(IMAGEN_DE.values()))
 indice_img = {a: i for i, a in enumerate(IMAGENES)}
 img_de_fila = lambda nombre: indice_img.get(IMAGEN_DE.get(nombre), -1)
 SKINS["i"] = [img_de_fila(x) for x in SKINS["n"]]
 print(f"imágenes: {len(IMAGENES)} archivos, {int((SKINS['i'] >= 0).sum())} de {len(SKINS)} skins con imagen"
-      if IMAGENES else "imágenes: no hay (correr imagenes.py)")
+      if IMAGENES else "imágenes: no hay (correr descargar_estaticos.py o imagenes.py)")
 
 # Diseños para «Fabricá un skin»: cada uno con su arma, rareza, origen y una imagen por exterior.
 DISENOS = []
@@ -561,6 +627,95 @@ for c, g in todo[todo["collection_release"].notna()].groupby("collection"):
     PARTICION.append({"nombre": re.sub(r"^The |\s*Collection$", "", c), "f": f"{f:%Y-%m-%d}", "origen": o,
                       "filas": len(g), "lado": "prueba" if c in COLECCIONES_TEST else "entrenamiento",
                       "grupo": COL_ARM if es_armory(o, f) else COL_RESTO})
+
+# ---------------------------------------------------------------- CS2 en dos minutos: ejemplos reales
+# (las demos de la versión 1817, con los cuatro orígenes del modelo y el Armory marcado por fecha)
+# Cada ejemplo apunta a una fila de SKINS (índice k), así la página toma de ahí nombre, precio e imagen.
+todo["var"] = np.select([todo["stattrak"] == 1, todo["souvenir"] == 1], [1, 2], 0)
+todo["armory"] = [es_armory(o, f) for o, f in zip(todo["origen"], todo["collection_release"])]
+CAT_EST = (json.loads(catalogo_ruta.read_text(encoding="utf-8")) if catalogo_ruta.exists()
+           else {"disenos": {}, "colecciones": {}, "cajas": {}})
+corto_col = lambda c: re.sub(r"^The |\s*Collection$", "", str(c))
+
+
+def src_estatico(url, carpeta):
+    """Una imagen del catálogo: la copia local de docs/img/<carpeta>/ si existe, si no la de internet."""
+    if not url:
+        return ""
+    local = Path(args.salida).parent / "img" / carpeta / url.rsplit("/", 1)[-1]
+    if local.exists():
+        return f"img/{carpeta}/{local.name}"
+    return url + ("/256fx256f" if "steamstatic" in url else "")
+
+
+# 1 y 3 · el nombre y el exterior: un AK-47 | Asiimov (o, si no está, el StatTrak con más exteriores a la venta)
+ej = todo[(todo["weapon"] == "AK-47") & (todo["pattern"] == "Asiimov")]
+if ej.empty or not (ej["var"] == 1).any():
+    st_ = todo[todo["var"] == 1]
+    ej = todo[todo["skin_id"] == st_.groupby("skin_id")["wear_orden"].nunique().idxmax()]
+ext_sid = ej["skin_id"].iloc[0]
+
+
+def fila_de(datos, w, v):
+    g = datos[(datos["wear_orden"] == w) & (datos["var"] == v)].sort_values("sell_price_usd")
+    return (int(g.index[0]), float(g["sell_price_usd"].iloc[0])) if len(g) else (-1, None)
+
+
+EXTERIOR = {"nombre": f"{ej['weapon'].iloc[0]} | {ej['pattern'].iloc[0]}", "arma": ej["weapon"].iloc[0],
+            "pintura": str(ej["pattern"].iloc[0]), "r": int(ej["rarity_orden"].iloc[0]),
+            "col": corto_col(ej["collection"].iloc[0]),
+            "k": [fila_de(ej, w, 0)[0] for w in range(5)], "k_st": [fila_de(ej, w, 1)[0] for w in range(5)],
+            "normal": [fila_de(ej, w, 0)[1] for w in range(5)], "stattrak": [fila_de(ej, w, 1)[1] for w in range(5)],
+            "float": [CAT_EST["disenos"].get(ext_sid, {}).get("float_min"), CAT_EST["disenos"].get(ext_sid, {}).get("float_max")]}
+
+# StatTrak y Souvenir contra la versión normal del mismo skin y exterior
+par = todo.pivot_table(index=["skin_id", "wear_orden"], columns="var", values="sell_price_usd", aggfunc="min")
+VECES_ST = float((par[1] / par[0]).dropna().median())
+VECES_SV = float((par[2] / par[0]).dropna().median())
+
+# 2 · la escalera de rarezas: precio típico, probabilidad en una caja y un ejemplo conocido
+PROB_CAJA = {2: 79.92, 3: 15.98, 4: 3.20, 5: 0.64}   # las que publica Valve para las cajas
+POPULARES = ["AK-47", "AWP", "M4A4", "M4A1-S", "USP-S", "Glock-18", "Desert Eagle"]
+ESCALERA = []
+for r_i in range(6):
+    g = todo[todo["rarity_orden"] == r_i]
+    pop = g[g["weapon"].isin(POPULARES) & (g["var"] == 0)]
+    base_ej = pop if len(pop) else g[g["var"] == 0]
+    sid = base_ej.groupby("skin_id").size().sort_values(ascending=False).index[0]
+    k = int(base_ej[base_ej["skin_id"] == sid].sort_values("wear_orden").index[0])
+    ESCALERA.append({"usd": round(float(g["sell_price_usd"].median()), 2), "q": round(float(g["q"].median())),
+                     "skins": len(g), "prob": PROB_CAJA.get(r_i), "k": k})
+
+# 4 · cómo se consigue: los cuatro orígenes del modelo; «drop de mapa», partido por época
+ORIGENES_INTRO = []
+for o in ORIGENES:
+    g = todo[todo["origen"] == o]
+    col_ej = g["collection"].value_counts().index[0]
+    item = {"skins": len(g), "colecciones": int(g["collection"].nunique()), "usd": round(float(g["sell_price_usd"].median()), 2),
+            "icono": src_estatico(CAT_EST["colecciones"].get(col_ej, {}).get("icono", ""), "colecciones"), "ej": corto_col(col_ej)}
+    if o == "drop de mapa":
+        item["epocas"] = [{"skins": len(gg), "colecciones": int(gg["collection"].nunique()),
+                           "usd": round(float(gg["sell_price_usd"].median()), 2)}
+                          for gg in (g[~g["armory"]], g[g["armory"]])]
+    ORIGENES_INTRO.append(item)
+
+# 4b · probá abrir una caja: los skins reales de una caja, con su precio en Field-Tested
+caja_col = "The Kilowatt Collection" if (todo["collection"] == "The Kilowatt Collection").any() else \
+    todo[todo["origen"] == "caja"]["collection"].value_counts().index[0]
+g_caja = todo[(todo["collection"] == caja_col) & (todo["var"] == 0)]
+caja_nombre = g_caja["caja"].dropna().iloc[0] if "caja" in g_caja and g_caja["caja"].notna().any() else corto_col(caja_col)
+CAJA = {"nombre": caja_nombre, "col": corto_col(caja_col),
+        "img": src_estatico(CAT_EST["cajas"].get(caja_nombre, {}).get("imagen", ""), "cajas"), "items": []}
+for sid, gg in g_caja.groupby("skin_id"):
+    ft = gg[gg["wear_orden"] == 2]
+    fila = (ft if len(ft) else gg).sort_values("sell_price_usd").iloc[0]
+    CAJA["items"].append({"k": int(fila.name), "r": int(fila["rarity_orden"]), "p": round(float(fila["sell_price_usd"]), 2),
+                          "w": int(fila["wear_orden"])})
+
+# 5 · el puesto: siete skins reales repartidos por la fila del mercado
+FILA_MERCADO = [int((todo["q"] - k).abs().idxmin()) for k in (3, 15, 30, 50, 70, 85, 97)]
+
+INTRO = {"exterior": EXTERIOR, "escalera": ESCALERA, "origenes": ORIGENES_INTRO, "caja": CAJA, "fila": FILA_MERCADO}
 SKINS = SKINS.to_dict(orient="records")
 
 # ================================================================ 11 · gráficos (Altair)
@@ -572,7 +727,7 @@ def n(x, d=0):
 
 
 def pct(x):
-    return f"{n(x)} %"
+    return f"{n(x)}\u00a0%"   # espacio duro: el % no queda solo en otra línea
 
 
 def usd(x):
@@ -598,26 +753,8 @@ EJE_USD = "'USD ' + format(datum.value, ',~r')"
 EJE_PUESTO = "datum.value == 0 ? '0 · el más barato' : datum.value == 100 ? 'el más caro · 100' : datum.value"
 datos = lambda filas: alt.Data(values=filas)
 
-# 11.1 portada: la escalera de la rareza. Una fila por rareza; cada raya es un skin.
-med_rar = (df.groupby("rarity_orden").agg(med=("q", "median"), usd=("sell_price_usd", "median")).reset_index())
-med_rar["rareza"] = med_rar["rarity_orden"].map(dict(enumerate(RAREZAS)))
-med_rar["t"] = [f"mitad: puesto {n(m)} · {usd(u)}" for m, u in zip(med_rar["med"], med_rar["usd"])]
-y_esc = alt.Y("rareza:N", sort=RAREZAS[::-1], title=None,
-              axis=alt.Axis(labelExpr=corta, labelFontSize=12.5, labelFontWeight=600, labelPadding=8, ticks=False, domain=False))
-x_puesto = alt.X("q:Q", scale=alt.Scale(domain=[0, 100], nice=False), title=None,
-                 axis=alt.Axis(values=[0, 25, 50, 75, 100], labelExpr=EJE_PUESTO, grid=True))
-rayas = (alt.Chart(skins).transform_calculate(rareza=rareza_nombre)
-         .mark_tick(thickness=1, opacity=0.35, size=20)
-         .encode(x=x_puesto, y=y_esc, color=alt.Color("rareza:N", scale=esc_rareza, legend=None),
-                 tooltip=[alt.Tooltip("n:N", title="Skin"), alt.Tooltip("p:Q", title="USD", format=",.2f")]))
-mitad = (alt.Chart(datos(med_rar.to_dict(orient="records")))
-         .mark_point(shape="diamond", filled=True, size=230, stroke="#ffffff", strokeWidth=1.5, opacity=1)
-         .encode(x=alt.X("med:Q"), y=y_esc, color=alt.Color("rareza:N", scale=esc_rareza, legend=None),
-                 tooltip=[alt.Tooltip("rareza:N"), alt.Tooltip("med:Q", title="Puesto de la mitad", format=".0f"),
-                          alt.Tooltip("usd:Q", title="Precio de la mitad", format=",.2f")]))
-mitad_t = (alt.Chart(datos(med_rar.to_dict(orient="records")))
-           .mark_text(dy=-17, fontSize=11.5, fontWeight=600).encode(x="med:Q", y=y_esc, text="t:N"))
-tira = (rayas + mitad + mitad_t).properties(width="container", height=6 * 52)
+# 11.1 portada: no lleva gráfico de Altair. Los seis AK-47 (GANCHO) los arma la plantilla con
+# las fotos y los precios de APP.SKINS, como en la versión 1817.
 
 # 11.2 los datos: cuántos skins hay en cada rango de precio
 mediana_precio = float(np.median(df["sell_price_usd"]))
@@ -673,24 +810,58 @@ x_r = alt.X("rareza:N", sort=RAREZAS, title="Rareza (de la más común a la más
 y_r = alt.Y("median:Q", scale=alt.Scale(domain=[0, 100]), title="Puesto típico en el mercado (0 a 100)")
 tip_r = [alt.Tooltip("origen:N"), alt.Tooltip("rareza:N"), alt.Tooltip("median:Q", title="Puesto típico", format=".0f"),
          alt.Tooltip("size:Q", title="Skins")]
-todos_l = (alt.Chart(datos(med_todos.to_dict(orient="records")))
-           .mark_line(strokeDash=[6, 4], strokeWidth=2, color=GRIS, point=alt.OverlayMarkDef(color=GRIS, size=40))
-           .encode(x=x_r, y=y_r, tooltip=tip_r))
-lineas_r = (alt.Chart(datos(med_ro.to_dict(orient="records")))
-            .mark_line(point=alt.OverlayMarkDef(size=70, filled=True))
-            .encode(x=x_r, y=y_r,
-                    color=alt.Color("origen:N", scale=esc_origen,
-                                    legend=alt.Legend(orient="top", title="Cómo se consigue:", direction="horizontal")),
-                    strokeWidth=alt.condition("datum.origen == 'caja'", alt.value(4.5), alt.value(2)),
-                    tooltip=tip_r))
-c_cons = float(med_todos.loc[med_todos["rarity_orden"] == 0, "median"].iloc[0])
-nota_gris = alt.layer(*[
-    alt.Chart(datos([{"rareza": RAREZAS[3], "median": y, "t": t}]))
-    .mark_text(align="left", dx=-30, color=GRIS, fontSize=11.5, fontWeight=w).encode(x=x_r, y="median:Q", text="t:N")
-    for t, y, w in (("Línea gris punteada: todos los orígenes mezclados.", 17, 700),
-                    ("Se quiebra en Mil-Spec porque los Consumer", 10, 400),
-                    ("no salen de cajas, sino de mapas viejos.", 4, 400))])
-graf_hallazgo = (todos_l + lineas_r + nota_gris).properties(width="container", height=320)
+# En tres pasos (de la versión 1817): 1 todos juntos · 2 separados por origen · 3 «drop de mapa»
+# partido por época. Arranca en el paso 3, que muestra todo junto: así el gráfico dice lo suyo sin
+# tocar nada (regla del instructivo) y los botones cuentan la historia desde el principio.
+mapa_df = df[df["origen"] == "drop de mapa"]
+mapa_arm_df = mapa_df["collection_release"].notna() & (mapa_df["collection_release"] >= ARMORY_DESDE)
+series_h = [med_todos.assign(k="todos")]
+series_h += [med_ro[med_ro["origen"] == o].assign(k=o) for o in ORIGENES]
+for clave, parte in (("clasico", mapa_df[~mapa_arm_df]), ("armory", mapa_df[mapa_arm_df])):
+    m = parte.groupby("rarity_orden")["q"].agg(["median", "size"]).reset_index().query("size >= 20")
+    m["rareza"] = m["rarity_orden"].map(dict(enumerate(RAREZAS)))
+    series_h.append(m.assign(k=clave))
+med_h = pd.concat([m[["rarity_orden", "rareza", "median", "size", "k"]] for m in series_h], ignore_index=True)
+SERIE = {"todos": "Todos juntos", "caja": "Caja", "drop de mapa": "Drop de mapa", "paquete souvenir": "Paquete souvenir",
+         "sin identificar": "Sin identificar", "clasico": "Drop de mapa, antes del Armory", "armory": "Drop de mapa del Armory"}
+COLOR_SERIE = {"todos": GRIS, "caja": COL_ORIGEN[0], "drop de mapa": COL_ORIGEN[1], "paquete souvenir": COL_ORIGEN[2],
+               "sin identificar": COL_ORIGEN[3], "clasico": COL_ORIGEN[1], "armory": ARMORY}
+med_h["serie"] = med_h["k"].map(SERIE)
+p_paso = alt.param(name="paso", value=3)
+OTROS = "(datum.k == 'caja' || datum.k == 'paquete souvenir' || datum.k == 'sin identificar')"
+OPACIDAD_H = ("paso == 1 ? (datum.k == 'todos' ? 1 : 0)"
+              " : paso == 2 ? (datum.k == 'todos' ? 0.25 : (datum.k == 'clasico' || datum.k == 'armory') ? 0 : 1)"
+              f" : (datum.k == 'clasico' || datum.k == 'armory') ? 1 : {OTROS} ? 0.35 : 0")
+esc_serie = alt.Scale(domain=list(SERIE.values()), range=[COLOR_SERIE[k] for k in SERIE])
+b_h = alt.Chart(datos(med_h.to_dict(orient="records"))).transform_calculate(op=OPACIDAD_H).transform_filter("datum.op > 0")
+tip_h = [alt.Tooltip("serie:N", title="Grupo"), alt.Tooltip("rareza:N"),
+         alt.Tooltip("median:Q", title="Puesto típico", format=".0f"), alt.Tooltip("size:Q", title="Skins")]
+color_h = alt.Color("serie:N", scale=esc_serie, legend=None)
+lin_h = b_h.mark_line().encode(
+    x=x_r, y=y_r, color=color_h, detail="k:N", opacity=alt.Opacity("op:Q", scale=None),
+    strokeWidth=alt.condition("datum.k == 'caja' || datum.k == 'clasico' || datum.k == 'armory'", alt.value(4), alt.value(2.5)),
+    strokeDash=alt.condition("datum.k == 'todos'", alt.value([6, 4]), alt.value([1, 0])))
+pts_h = b_h.mark_point(filled=True, size=80).encode(x=x_r, y=y_r, color=color_h, opacity=alt.Opacity("op:Q", scale=None),
+                                                     tooltip=tip_h)
+MED_H = {(k, int(r)): float(m) for k, r, m in zip(med_h["k"], med_h["rarity_orden"], med_h["median"])}
+med_mil_clas = MED_H.get(("clasico", 2), 60.0)
+med_mil_arm = MED_H.get(("armory", 2), 20.0)
+NOTAS_H = [
+    {"paso": 1, "rareza": RAREZAS[2], "median": MED_H[("todos", 2)], "t": "¿Más raro y más barato?", "dy": 30},
+    {"paso": 2, "rareza": RAREZAS[1], "median": 95, "t": "Separados por cómo se consiguen, todas suben", "dy": 0},
+    {"paso": 3, "rareza": RAREZAS[2], "median": (med_mil_clas + med_mil_arm) / 2 - 8, "t": "Misma etiqueta, otra época",
+     "dy": 0},
+]
+# sin color propio: el anillo y los textos toman el del texto del tema (--ink)
+anillo = (alt.Chart(datos([NOTAS_H[0]])).transform_filter("paso == 1")
+          .mark_point(size=900, strokeWidth=2.5).encode(x=x_r, y="median:Q"))
+notas_h = alt.layer(*[alt.Chart(datos([nota])).transform_filter(f"paso == {nota['paso']}")
+                      .mark_text(fontWeight=700, fontSize=13, dy=nota["dy"], align="right" if nota["paso"] == 3 else "center",
+                                 dx=-10 if nota["paso"] == 3 else 0)
+                      .encode(x=x_r, y="median:Q", text="t:N") for nota in NOTAS_H])
+flecha_h = (alt.Chart(datos([{"rareza": RAREZAS[2], "a": med_mil_arm + 4, "b": med_mil_clas - 4}])).transform_filter("paso == 3")
+            .mark_rule(strokeDash=[3, 3], strokeWidth=1.5).encode(x=x_r, y="a:Q", y2="b:Q"))
+graf_hallazgo = (lin_h + pts_h + anillo + flecha_h + notas_h).add_params(p_paso).properties(width="container", height=340)
 MED_RO = {(o, int(r)): float(m) for o, r, m in zip(med_ro["origen"], med_ro["rarity_orden"], med_ro["median"])}
 
 # 11.3b lo que encontramos (2): el Armory, colección por colección
@@ -788,14 +959,18 @@ arriba = (alt.Chart(datos([{"x": 0, "y": 0, "y2": 100}, {"x": 100, "y": 100, "y2
           .mark_area(color=ARMORY, opacity=0.07).encode(x="x:Q", y="y:Q", y2="y2:Q"))
 diag_e = (alt.Chart(datos([{"x": 0, "y": 0}, {"x": 100, "y": 100}]))
           .mark_line(color=GRIS, strokeDash=[5, 4], strokeWidth=1.5).encode(x="x:Q", y="y:Q"))
-pts_e = (alt.Chart(skins).transform_filter("datum.l == 1")
+# Dos vistas (de la versión 1817): «vista» 1 = la prueba (arranca acá, que es lo que dice el título) y
+# 0 = las colecciones conocidas, cada skin predicho por un modelo que no vio su colección. En las
+# conocidas no hay Armory, así que todo va en gris. La leyenda la arma la página (cambia con la vista).
+p_vista = alt.param(name="vista", value=1)
+pts_e = (alt.Chart(skins).transform_filter("datum.l == vista")
          .transform_calculate(grupo=f"datum.o == 'drop de mapa' && datum.f >= '{ARMORY_DESDE:%Y-%m-%d}' ? '{GRUPO_ARM}' : '{GRUPO_RESTO}'",
                               primero="datum.grupo == '" + GRUPO_ARM + "' ? 1 : 0")
          .mark_circle(size=24, opacity=0.65)
          .encode(x=alt.X("y:Q", scale=alt.Scale(domain=[0, 100]), title="Puesto real en el mercado"),
                  y=alt.Y("yh:Q", scale=alt.Scale(domain=[0, 100]), title="Puesto que dijo el modelo"),
                  color=alt.Color("grupo:N", scale=alt.Scale(domain=[GRUPO_ARM, GRUPO_RESTO], range=[ARMORY, GRIS]),
-                                 legend=alt.Legend(orient="top", title=None)),
+                                 legend=None),
                  order=alt.Order("primero:Q"),
                  tooltip=[alt.Tooltip("n:N", title="Skin"), alt.Tooltip("c:N", title="Colección"),
                           alt.Tooltip("y:Q", title="Puesto real", format=".0f"), alt.Tooltip("yh:Q", title="Puesto del modelo", format=".0f"),
@@ -805,7 +980,11 @@ txt_e = alt.layer(
     .mark_text(align="left", baseline="top", color=ARMORY, fontWeight=700, fontSize=12).encode(x=alt.value(10), y=alt.value(8), text="t:N"),
     alt.Chart(datos([{"x": 99, "y": 2, "t": "Sobre la línea punteada: acierta. Debajo: lo pone más barato"}]))
     .mark_text(align="right", baseline="bottom", color=GRIS, fontWeight=600, fontSize=11.5).encode(x="x:Q", y="y:Q", text="t:N"))
-graf_error = alt.layer(arriba, diag_e, pts_e, txt_e).properties(width="container", height=400)
+graf_error = alt.layer(arriba, diag_e, pts_e, txt_e).add_params(p_vista).properties(width="container", height=400)
+# el marcador de cada vista
+NUBE = {"tr_r2": R2_OOF, "tr_arriba": float(100 * (train["predicho"] > train["percentil"]).mean()),
+        "tr_sesgo": float((train["predicho"] - train["percentil"]).mean()),
+        "te_r2": R2_TEST, "te_arriba": float(100 * (test["predicho"] > test["percentil"]).mean())}
 
 # 11.5 el Armory en el modelo: lo que aprendió contra lo que encontró, por origen
 LADOS = {"entrenamiento": "Lo que aprendió (colecciones viejas)", "prueba": "Lo que encontró (colecciones nuevas)"}
@@ -903,8 +1082,10 @@ p_origen = alt.param(name="f_origen", value="todos")
 p_rareza = alt.param(name="f_rareza", value=-1)
 p_arma = alt.param(name="f_arma", value="todas")
 p_var = alt.param(name="f_var", value="todas")
+p_buscar = alt.param(name="f_buscar", value="")   # texto del buscador, en minúscula
 filtro = ("(f_origen == 'todos' || datum.o == f_origen) && (f_rareza < 0 || datum.r == f_rareza)"
-          " && (f_arma == 'todas' || datum.a == f_arma) && (f_var == 'todas' || datum.v == f_var)")
+          " && (f_arma == 'todas' || datum.a == f_arma) && (f_var == 'todas' || datum.v == f_var)"
+          " && (f_buscar == '' || indexof(lower(datum.n), f_buscar) >= 0)")
 precio_min, precio_max = float(df["sell_price_usd"].min()), float(df["sell_price_usd"].max())
 zona_e = alt.Chart(datos([{"a": ARMORY_DESDE.strftime("%Y-%m-%d"), "b": fin_snap}])) \
     .mark_rect(color=ARMORY, opacity=0.08).encode(x="a:T", x2="b:T")
@@ -923,7 +1104,7 @@ nube = (alt.Chart(skins).transform_filter("datum.f != ''").transform_filter(filt
                 # Sin tooltip, Vega no detecta el punto bajo el mouse y la ficha no se actualiza;
                 # la página desactiva la ventanita de este gráfico (la ficha ya muestra todo).
                 tooltip=alt.Tooltip("n:N")))
-graf_explora = alt.layer(zona_e, zona_et, nube).add_params(p_origen, p_rareza, p_arma, p_var) \
+graf_explora = alt.layer(zona_e, zona_et, nube).add_params(p_origen, p_rareza, p_arma, p_var, p_buscar) \
     .properties(width="container", height=480)
 
 # 11.8 probá el modelo: dónde cae el skin fabricado en la escalera del mercado
@@ -943,7 +1124,7 @@ punta = uno.transform_calculate(a="pred").mark_point(shape="triangle-down", size
 graf_proba = (fondo + banda + marca + punta).add_params(p_pred, p_lo, p_hi).properties(width="container", height=90)
 
 ESPECS = {k: v.to_dict() for k, v in {
-    "tira": tira, "datos": graf_datos, "precios": graf_precios, "hallazgo": graf_hallazgo,
+    "datos": graf_datos, "precios": graf_precios, "hallazgo": graf_hallazgo,
     "armory_tiempo": graf_armory_tiempo, "armory_rareza": graf_armory_rareza, "modelo": graf_modelo,
     "error": graf_error, "armory": graf_armory, "comparacion": graf_comp, "importancia": graf_imp,
     "particion": graf_particion, "defensa": graf_defensa,
@@ -1112,7 +1293,19 @@ T["DEF_TABLA_FILAS"] = "".join(fila_tabla((m, n(defe[(m, "sin")]["r2"], 2), n(de
                                            signo(defe[(m, "sin")]["sesgo_mapa"]), signo(defe[(m, "con")]["sesgo_mapa"])))
                                for m in orden_def)
 
-JS = {"SKINS": SKINS, "ESPECS": ESPECS, "GRILLA": GRILLA, "VISTOS": VISTOS, "ARMAS": ARMAS, "ORIGENES": ORIGENES,
+# las demos del juego, el hallazgo en tres pasos y la nube con dos vistas
+T["VECES_ST"], T["VECES_SV"] = n(VECES_ST, 1), n(VECES_SV, 1)
+T["MED_CLAS_MIL"], T["MED_ARM_MIL"] = n(med_mil_clas), n(med_mil_arm)
+T["NUBE_TR_R2"], T["NUBE_TR_ARRIBA"] = n(NUBE["tr_r2"], 2), pct(NUBE["tr_arriba"])
+T["NUBE_TR_SESGO"] = signo(NUBE["tr_sesgo"])
+T["NUBE_TE_R2"], T["NUBE_TE_ARRIBA"] = n(NUBE["te_r2"], 2), pct(NUBE["te_arriba"])
+T["CAJA_DEMO"], T["CAJA_DEMO_COL"] = CAJA["nombre"], CAJA["col"]
+
+T["N_COEF"] = str(N_COEF)
+T["R2_RIDGE2"] = n(res[REFERENCIA]["r2"], 2)
+
+JS = {"SKINS": SKINS, "ESPECS": ESPECS, "INTRO": INTRO, "FORMULA": FORMULA, "NL_NIVEL": NL_NIVEL,
+      "SERIE": {k: [SERIE[k], COLOR_SERIE[k]] for k in SERIE}, "COL_ARMORY": ARMORY, "COL_GRIS": GRIS, "GRILLA": GRILLA, "VISTOS": VISTOS, "ARMAS": ARMAS, "ORIGENES": ORIGENES,
       "CUANTILES": CUANTILES_PRECIO, "MAE_CV": round(MAE_CV, 2), "SESGO_MAPA": round(float(T["MAPA_SESGO"].replace(",", ".")), 1),
       "MAE_TEST": round(MAE_TEST, 2), "SESGO_TEST": round(SESGO_TEST, 1), "GANCHO": GANCHO,
       "COL_RAREZA": COL_RAREZA, "COL_ORIGEN": COL_ORIGEN, "ARMORY_DESDE": ARMORY_DESDE.strftime("%Y-%m-%d"),
