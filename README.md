@@ -15,6 +15,7 @@ Proyecto integrador de **Ciencia de Datos** (UTN FRM, 2026) · grupo **5K10-13**
 | `notebooks/Entrega3_modelado_30-10_R2.ipynb` | Modelado: pisos, validación temporal por colección, comparación de cuatro familias con R², ajuste, prueba, error en dólares | 3 |
 | `data/` | El snapshot del 30/10/2026 que usa la aplicación, su JSON de calidad, el embudo de filtros contado sobre el bronce y los números del notebook para verificar | — |
 | `build_app.py` | Reproduce el modelo del notebook con la misma semilla y genera la aplicación | 4 |
+| `imagenes.py` | Baja una vez las imágenes de Steam de cada skin (catálogo de ByMykel), las achica a webp en `docs/img/` y escribe `data/imagenes_AAAA-MM-DD.json`. Se puede cortar y retomar | 4 |
 | `app/plantilla.html` | Diseño de la página (HTML, CSS y JavaScript); `build_app.py` le inyecta los gráficos de Altair y los datos | 4 |
 | `docs/index.html` | La aplicación generada, la que publica GitHub Pages | 4 |
 
@@ -41,6 +42,7 @@ Se abren en Colab o en Jupyter. El de la Entrega 3 fija `scikit-learn==1.6.1` en
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+python imagenes.py                                             # una sola vez: baja las imágenes a docs/img/
 python build_app.py                                            # snapshot del 30/10
 python build_app.py --csv data/cs2_skins_dataset_AAAA-MM-DD.csv   # otro snapshot
 ```

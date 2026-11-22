@@ -382,7 +382,10 @@ for _, g in base.groupby("skin_id"):
     if g["wear_orden"].nunique() >= 3:
         rhos.append(g["wear_orden"].corr(g["q"], method="spearman"))
 rhos = pd.Series(rhos).dropna()
-H3 = {"skins": len(rhos), "rho": float(rhos.median()), "baja": float(100 * (rhos < 0).mean())}
+# El notebook del EDA (Entrega 2) informa el PROMEDIO de las correlaciones por skin; acá van
+# las dos, para que el número de la página se pueda comparar con el del notebook.
+H3 = {"skins": len(rhos), "rho": float(rhos.median()), "media": float(rhos.mean()),
+      "baja": float(100 * (rhos < 0).mean())}
 caja = df[df["origen"] == "caja"]
 r4, n4 = [], []
 for _, g in caja.groupby("rarity"):
@@ -391,6 +394,100 @@ for _, g in caja.groupby("rarity"):
 H4 = {"r": float(np.average(r4, weights=n4)), "filas": int(sum(n4))}
 MEDIANA_RAREZA = df.groupby("rarity_orden")["q"].median().to_dict()
 SPEARMAN_RAREZA = float(df["rarity_orden"].corr(df["q"], method="spearman"))
+
+# ================================================================ 8b · el Armory, en números
+# El 02/10/2024 Valve lanzó el Armory: un pase pago que da créditos para canjear skins de
+# colecciones nuevas. Esas colecciones no tienen caja, así que el pipeline las clasifica como
+# «drop de mapa», igual que las colecciones de mapa viejas; pero se consiguen mucho más fácil.
+ARMORY_DESDE = pd.Timestamp("2024-10-02")
+mapa = df[(df["origen"] == "drop de mapa") & df["collection_release"].notna()].copy()
+mapa["armory"] = mapa["collection_release"] >= ARMORY_DESDE
+pre, arm = mapa[~mapa["armory"]], mapa[mapa["armory"]]
+ERA_PRE, ERA_ARM = "Antes del Armory", "Armory (desde oct. 2024)"
+ARM = {"col_pre": int(pre["collection"].nunique()), "col_arm": int(arm["collection"].nunique()),
+       "usd_pre": float(pre["sell_price_usd"].median()), "usd_arm": float(arm["sell_price_usd"].median()),
+       "q_pre": float(pre["q"].median()), "q_arm": float(arm["q"].median()),
+       "skins_arm": len(arm)}
+ARM["veces"] = ARM["usd_pre"] / ARM["usd_arm"]
+col_mapa = (mapa.groupby("collection")
+                .agg(fecha=("collection_release", "first"), skins=("q", "size"), med=("q", "median"),
+                     usd=("sell_price_usd", "median"), armory=("armory", "first"))
+                .reset_index())
+col_mapa["era"] = np.where(col_mapa["armory"], ERA_ARM, ERA_PRE)
+col_mapa["fecha"] = col_mapa["fecha"].dt.strftime("%Y-%m-%d")
+col_mapa["nombre"] = col_mapa["collection"].str.replace("The ", "", regex=False).str.replace(" Collection", "", regex=False)
+# La misma rareza, antes y después: así se ve que no es que el Armory traiga rarezas más bajas.
+rar_mapa = mapa.groupby(["rarity_orden", "armory"])["sell_price_usd"].median().unstack()
+RAR_MAPA = [{"rareza": RAREZAS[int(r)], "antes": float(fila[False]), "armory": float(fila[True]),
+             "veces": float(fila[False] / fila[True])}
+            for r, fila in rar_mapa.dropna().iterrows()]
+MILSPEC_MAPA = next(x for x in RAR_MAPA if x["rareza"] == "Mil-Spec Grade")
+# Qué parte de la prueba es del Armory, y cuántas colecciones del Armory vio el entrenamiento.
+test_arm = test["collection_release"] >= ARMORY_DESDE
+mapa_arm_te = test_arm & (test["origen"] == "drop de mapa")
+ARM["test_col_arm"] = int(test.loc[test_arm, "collection"].nunique())
+ARM["train_col_arm"] = int(train.loc[train["collection_release"] >= ARMORY_DESDE, "collection"].nunique())
+ARM["test_pct_mapa_arm"] = float(100 * mapa_arm_te.mean())
+ARM["sesgo_mapa_arm"] = float(test.loc[mapa_arm_te, "error"].mean())
+ARM["sesgo_resto"] = float(test.loc[~mapa_arm_te, "error"].mean())
+ARM["caro_mapa_arm"] = float(100 * (test.loc[mapa_arm_te, "error"] > 0).mean())
+print("armory:", {k: round(v, 2) for k, v in ARM.items()})
+
+# ================================================================ 8c · la prueba de la causa: ¿y si el modelo supiera qué es el Armory?
+# Mismo procedimiento, con un corte más tarde que deja colecciones del Armory en el entrenamiento
+# (prueba: colecciones desde 03/2025), y un origen propio para ellas: «drop del Armory».
+# Hiperparámetros: los que eligió la grilla de cada modelo con pedazos temporales de ese
+# entrenamiento (exp_modelos_armory.py, en el repositorio). El modelo entregado NO se toca:
+# esto explica el error de la prueba, no lo corrige.
+def es_armory(origen, fecha):
+    return origen == "drop de mapa" and pd.notna(fecha) and fecha >= ARMORY_DESDE
+
+
+print("experimento: el Armory como origen propio…")
+CORTE_EXP = pd.Timestamp("2025-03-01")
+PARAMS_EXP = {
+    "sin": {"Regresión lineal (Ridge)": Ridge(alpha=10),
+            "Árbol de decisión": DecisionTreeRegressor(min_samples_leaf=40, random_state=SEMILLA),
+            "Random Forest": RandomForestRegressor(n_estimators=300, min_samples_leaf=10, random_state=SEMILLA, n_jobs=-1),
+            "Gradient Boosting": HistGradientBoostingRegressor(learning_rate=0.1, max_leaf_nodes=15, min_samples_leaf=40,
+                                                               random_state=SEMILLA)},
+    "con": {"Regresión lineal (Ridge)": Ridge(alpha=10),
+            "Árbol de decisión": DecisionTreeRegressor(min_samples_leaf=20, random_state=SEMILLA),
+            "Random Forest": RandomForestRegressor(n_estimators=300, min_samples_leaf=10, random_state=SEMILLA, n_jobs=-1),
+            "Gradient Boosting": HistGradientBoostingRegressor(learning_rate=0.1, max_leaf_nodes=15, min_samples_leaf=40,
+                                                               random_state=SEMILLA)},
+}
+fe_ = df["collection_release"].fillna(pd.Timestamp("2000-01-01"))
+tr_e, te_e = df[fe_ < CORTE_EXP].reset_index(drop=True), df[fe_ >= CORTE_EXP].reset_index(drop=True)
+M_e = np.sort(tr_e["sell_price_usd"].to_numpy(float))
+ytr_e, yte_e = percentil_contra(tr_e["sell_price_usd"], M_e), percentil_contra(te_e["sell_price_usd"], M_e)
+arm_tr_e = np.array([es_armory(o, f) for o, f in zip(tr_e["origen"], tr_e["collection_release"])])
+arm_te_e = np.array([es_armory(o, f) for o, f in zip(te_e["origen"], te_e["collection_release"])])
+mapa_e = (te_e["origen"] == "drop de mapa").to_numpy()
+DEFENSA = []
+for version, modelos in PARAMS_EXP.items():
+    Xa, Xb = tr_e[COLUMNAS_X].copy(), te_e[COLUMNAS_X].copy()
+    if version == "con":
+        Xa["origen"] = np.where(arm_tr_e, "drop del Armory", tr_e["origen"])
+        Xb["origen"] = np.where(arm_te_e, "drop del Armory", te_e["origen"])
+    for nombre, reg in modelos.items():
+        p = armar_modelo(reg).fit(Xa, ytr_e).predict(Xb)
+        DEFENSA.append({"modelo": nombre, "version": version, "r2": float(r2_score(yte_e, p)),
+                        "sesgo_mapa": float(np.mean(p[mapa_e] - yte_e[mapa_e])),
+                        "arriba": float(100 * np.mean(p > yte_e))})
+DEFENSA_TABLA = float(r2_score(yte_e, MediaPorGrupo(("rarity", "wear")).fit(tr_e, ytr_e).predict(te_e)))
+DEF_INFO = {"train": len(tr_e), "test": len(te_e), "col_test": int(te_e["collection"].nunique()),
+            "arm_train": int(arm_tr_e.sum()), "arm_test": int(arm_te_e.sum())}
+print("  ", [(d["modelo"][:6], d["version"], round(d["r2"], 3)) for d in DEFENSA], "tabla", round(DEFENSA_TABLA, 3))
+
+# La escalera de precios en dólares dentro de las cajas (la comparación más limpia: mismo origen).
+CAJA_RAREZA = []
+for r_i in range(2, 6):
+    g = caja[caja["rarity_orden"] == r_i]["sell_price_usd"]
+    CAJA_RAREZA.append({"rareza": RAREZAS[r_i], "med": float(g.median()), "p25": float(g.quantile(0.25)),
+                        "p75": float(g.quantile(0.75)), "skins": len(g)})
+for a, b in zip(CAJA_RAREZA, CAJA_RAREZA[1:]):
+    b["paso"] = b["med"] / a["med"]
 
 # ================================================================ 9 · verificación contra el notebook
 VERIFICADO = "no se encontró el archivo de metadatos del notebook"
@@ -412,7 +509,11 @@ todo = pd.concat([train, test], ignore_index=True)
 todo["q"] = percentil_contra(todo["sell_price_usd"], MERCADO_TOTAL)
 todo["ph"] = percentil_a_dolares(todo["predicho"].to_numpy())
 VAR = np.select([todo["stattrak"] == 1, todo["souvenir"] == 1], ["StatTrak", "Souvenir"], "Normal")
+# Corrimiento en días, sólo para dibujar: los skins de una colección comparten fecha y, sin esto,
+# en Explorá quedarían todos apilados en una raya vertical.
+JITTER = np.random.default_rng(SEMILLA).integers(-50, 51, len(todo))
 SKINS = pd.DataFrame({
+    "j": JITTER,
     "n": todo["market_hash_name"], "a": todo["weapon"], "r": todo["rarity_orden"].astype(int),
     "w": todo["wear_orden"].astype(int), "v": VAR, "o": todo["origen"],
     "c": todo["collection"].fillna("sin colección"),
@@ -420,179 +521,51 @@ SKINS = pd.DataFrame({
     "p": todo["sell_price_usd"].round(2), "q": todo["q"].round(1),
     "y": todo["percentil"].round(1), "yh": todo["predicho"].round(1), "ph": todo["ph"].round(2),
     "l": lado,
-}).to_dict(orient="records")
+})
+
+# Imágenes (las baja imagenes.py a docs/img/). Cada fila apunta a un índice de IMAGENES, o -1.
+imagenes_ruta = ruta.with_name(f"imagenes_{SNAPSHOT}.json")
+IMAGEN_DE = json.loads(imagenes_ruta.read_text(encoding="utf-8")) if imagenes_ruta.exists() else {}
+IMAGENES = sorted(set(IMAGEN_DE.values()))
+indice_img = {a: i for i, a in enumerate(IMAGENES)}
+img_de_fila = lambda nombre: indice_img.get(IMAGEN_DE.get(nombre), -1)
+SKINS["i"] = [img_de_fila(x) for x in SKINS["n"]]
+print(f"imágenes: {len(IMAGENES)} archivos, {int((SKINS['i'] >= 0).sum())} de {len(SKINS)} skins con imagen"
+      if IMAGENES else "imágenes: no hay (correr imagenes.py)")
+
+# Diseños para «Fabricá un skin»: cada uno con su arma, rareza, origen y una imagen por exterior.
+DISENOS = []
+for sid, g in df.groupby("skin_id"):
+    normal = g[g["souvenir"] == 0]
+    imgs = []
+    for w in range(5):
+        filas = g[g["wear_orden"] == w]
+        imgs.append(img_de_fila(filas["market_hash_name"].iloc[0]) if len(filas) else -1)
+    DISENOS.append({"a": ARMAS.index(g["weapon"].iloc[0]), "r": int(g["rarity_orden"].iloc[0]),
+                    "o": ORIGENES.index((normal if len(normal) else g)["origen"].iloc[0]),
+                    "d": str(g["pattern"].iloc[0]), "c": str(g["collection"].iloc[0]).replace("The ", "").replace(" Collection", ""),
+                    "im": imgs, "pop": int(len(g))})
+DISENOS.sort(key=lambda d: (d["a"], d["r"], -d["pop"], d["d"]))
+
+# Portada: seis AK-47 reales, del más barato al más caro (índices en SKINS).
+ak = todo[todo["weapon"] == "AK-47"].sort_values("sell_price_usd")
+GANCHO = [int(ak.index[int(round(k * (len(ak) - 1)))]) for k in (0, 0.25, 0.5, 0.75, 0.93, 1)]
+
+# El modelo, paso 2: cada colección en el tiempo, de qué lado de la partición quedó.
+COL_ARM, COL_RESTO = "Colecciones de drop de mapa del Armory", "Las demás colecciones"
+PARTICION = []
+for c, g in todo[todo["collection_release"].notna()].groupby("collection"):
+    normales = g[(g["stattrak"] == 0) & (g["souvenir"] == 0)]
+    o = (normales if len(normales) else g)["origen"].mode().iloc[0]
+    f = g["collection_release"].iloc[0]
+    PARTICION.append({"nombre": re.sub(r"^The |\s*Collection$", "", c), "f": f"{f:%Y-%m-%d}", "origen": o,
+                      "filas": len(g), "lado": "prueba" if c in COLECCIONES_TEST else "entrenamiento",
+                      "grupo": COL_ARM if es_armory(o, f) else COL_RESTO})
+SKINS = SKINS.to_dict(orient="records")
 
 # ================================================================ 11 · gráficos (Altair)
-COL_RAREZA = ["#9fb3cc", "#5e98d9", "#4b69ff", "#8847ff", "#d32ce6", "#eb4b4b"]   # los colores de CS2
-COL_ORIGEN = ["#2fae9f", "#e8962e", "#7e8ce0", "#9a8f86"]
-esc_rareza = alt.Scale(domain=RAREZAS, range=COL_RAREZA)
-esc_origen = alt.Scale(domain=ORIGENES, range=COL_ORIGEN)
-skins = alt.NamedData("skins")
-rareza_nombre = "['Consumer Grade','Industrial Grade','Mil-Spec Grade','Restricted','Classified','Covert'][datum.r]"
-
-# 11.1 portada: el mercado en una tira
-tira = (alt.Chart(skins).transform_calculate(rareza=rareza_nombre)
-        .mark_tick(orient="vertical", thickness=1, opacity=0.55)
-        .encode(x=alt.X("q:Q", scale=alt.Scale(domain=[0, 100]), title="Posición en el mercado del día (percentil)"),
-                color=alt.Color("rareza:N", scale=esc_rareza, legend=alt.Legend(orient="bottom", title=None, columns=3,
-                                                                                   symbolType="square")),
-                tooltip=[alt.Tooltip("n:N", title="Skin"), alt.Tooltip("p:Q", title="USD", format=",.2f")])
-        .properties(width="container", height=64))
-
-# 11.2 los datos: precios en escala logarítmica
-mediana_precio = float(np.median(df["sell_price_usd"]))
-base_hist = (alt.Chart(skins).transform_calculate(lp="log(datum.p)/LN10")
-             .transform_bin("lp_bin", "lp", bin=alt.Bin(step=0.1, extent=[-1.6, 3.4])))
-hist = (base_hist.mark_bar(color="#c99a4b", cornerRadiusTopLeft=2, cornerRadiusTopRight=2)
-        .encode(x=alt.X("lp_bin:Q", bin="binned", scale=alt.Scale(domain=[-1.6, 3.4]),
-                        axis=alt.Axis(values=[-1, 0, 1, 2, 3], labelExpr="'USD ' + format(pow(10, datum.value), ',~r')"),
-                        title="Precio de venta más bajo en Steam (escala logarítmica)"),
-                x2="lp_bin_end:Q",
-                y=alt.Y("count():Q", title="Skins"),
-                tooltip=[alt.Tooltip("count():Q", title="Skins")]))
-regla = (alt.Chart(alt.Data(values=[{"lp": float(np.log10(mediana_precio))}]))
-         .mark_rule(strokeDash=[4, 3], strokeWidth=1.5, color="#e8962e").encode(x="lp:Q"))
-etiqueta = (alt.Chart(alt.Data(values=[{"lp": float(np.log10(mediana_precio)),
-                                        "t": f"La mitad cuesta menos de USD {mediana_precio:.2f}".replace(".", ",")}]))
-            .mark_text(align="left", dx=6, dy=-6, fontWeight=600, color="#e8962e").encode(x="lp:Q", y=alt.value(12), text="t:N"))
-graf_datos = (hist + regla + etiqueta).properties(width="container", height=240)
-
-# 11.3 lo que encontramos: la rareza ordena el precio dentro de cada origen
-med_ro = (df.groupby(["origen", "rarity_orden"])["q"].agg(["median", "size"]).reset_index()
-            .query("size >= 20"))
-med_ro["rareza"] = med_ro["rarity_orden"].map(dict(enumerate(RAREZAS)))
-med_todos = df.groupby("rarity_orden")["q"].agg(["median", "size"]).reset_index()
-med_todos["rareza"] = med_todos["rarity_orden"].map(dict(enumerate(RAREZAS)))
-med_todos["origen"] = "todos juntos"
-x_r = alt.X("rareza:N", sort=RAREZAS, title=None, axis=alt.Axis(labelAngle=0, labelExpr="split(datum.label, ' ')[0]"))
-y_r = alt.Y("median:Q", scale=alt.Scale(domain=[0, 100]), title="Posición típica (percentil mediano)")
-tip_r = [alt.Tooltip("origen:N"), alt.Tooltip("rareza:N"), alt.Tooltip("median:Q", title="Percentil mediano", format=".0f"),
-         alt.Tooltip("size:Q", title="Skins")]
-todos_l = (alt.Chart(alt.Data(values=med_todos.to_dict(orient="records")))
-           .mark_line(strokeDash=[6, 4], strokeWidth=2.5, color="#8a93a0", point=alt.OverlayMarkDef(color="#8a93a0", size=50))
-           .encode(x=x_r, y=y_r, tooltip=tip_r))
-lineas_r = (alt.Chart(alt.Data(values=med_ro.to_dict(orient="records")))
-            .mark_line(strokeWidth=2.5, point=alt.OverlayMarkDef(size=70, filled=True))
-            .encode(x=x_r, y=y_r, color=alt.Color("origen:N", scale=esc_origen, legend=alt.Legend(orient="bottom", title=None, columns=2)),
-                    tooltip=tip_r))
-fin = med_todos[med_todos["rarity_orden"] == 0]
-txt_todos = (alt.Chart(alt.Data(values=[{"rareza": RAREZAS[0], "median": float(fin["median"].iloc[0]), "t": "Todos juntos"}]))
-             .mark_text(dy=-12, color="#8a93a0", fontWeight=600).encode(x=x_r, y="median:Q", text="t:N"))
-graf_hallazgo = (todos_l + lineas_r + txt_todos).properties(width="container", height=300)
-MED_RO = {(o, int(r)): float(m) for o, r, m in zip(med_ro["origen"], med_ro["rarity_orden"], med_ro["median"])}
-
-# 11.4 el modelo: validación contra prueba
-prueba_largo = []
-for r in PRUEBA:
-    prueba_largo += [{"modelo": r["modelo"], "momento": "validación", "r2": r["validacion"], "orden": 0},
-                     {"modelo": r["modelo"], "momento": "prueba (colecciones nuevas)", "r2": r["prueba"], "orden": 1}]
-orden_mod = [r["modelo"] for r in PRUEBA][::-1]
-b_m = alt.Chart(alt.Data(values=prueba_largo))
-lineas_m = b_m.mark_line(color="#8a93a0", strokeWidth=2).encode(
-    x=alt.X("r2:Q", scale=alt.Scale(domain=[-0.2, 0.7]), title="R²  (0 = predecir el promedio, 1 = perfecto)"),
-    y=alt.Y("modelo:N", sort=orden_mod, title=None), detail="modelo:N", order="orden:Q")
-pts_m = b_m.mark_point(size=150, filled=True, strokeWidth=2).encode(
-    x="r2:Q", y=alt.Y("modelo:N", sort=orden_mod),
-    color=alt.Color("momento:N", scale=alt.Scale(domain=["validación", "prueba (colecciones nuevas)"], range=["#4b69ff", "#e8962e"]),
-                    legend=alt.Legend(orient="bottom", title=None)),
-    tooltip=[alt.Tooltip("modelo:N"), alt.Tooltip("momento:N"), alt.Tooltip("r2:Q", title="R²", format=".3f")])
-txt_m = b_m.mark_text(dy=-14, fontWeight=600).encode(x="r2:Q", y=alt.Y("modelo:N", sort=orden_mod),
-                                                     text=alt.Text("r2:Q", format=".2f"))
-cero = alt.Chart(alt.Data(values=[{"x": 0}])).mark_rule(color="#8a93a0", strokeDash=[2, 3]).encode(x="x:Q")
-graf_modelo = (cero + lineas_m + pts_m + txt_m).properties(width="container", height=210)
-
-# 11.5 el Armory: percentil mediano por origen, entrenamiento contra prueba
-b_a = alt.Chart(alt.Data(values=corrimiento))
-lin_a = b_a.mark_line(strokeWidth=3, opacity=0.6).encode(
-    x=alt.X("mediana:Q", scale=alt.Scale(domain=[0, 100]), title="Percentil mediano"),
-    y=alt.Y("origen:N", sort=ORIGENES, title=None), color=alt.Color("origen:N", scale=esc_origen, legend=None),
-    detail="origen:N")
-pts_a = b_a.mark_point(size=140, strokeWidth=2.5).encode(
-    x="mediana:Q", y=alt.Y("origen:N", sort=ORIGENES), color=alt.Color("origen:N", scale=esc_origen, legend=None),
-    shape=alt.Shape("lado:N", scale=alt.Scale(domain=["entrenamiento", "prueba"], range=["circle", "triangle-left"]),
-                    legend=alt.Legend(orient="bottom", title=None)),
-    fill=alt.condition("datum.lado == 'entrenamiento'", alt.Color("origen:N", scale=esc_origen), alt.value("transparent")),
-    tooltip=[alt.Tooltip("origen:N"), alt.Tooltip("lado:N"), alt.Tooltip("mediana:Q", format=".1f", title="Percentil mediano"),
-             alt.Tooltip("filas:Q"), alt.Tooltip("sesgo:Q", format="+.1f", title="Sesgo del modelo")])
-graf_armory = (lin_a + pts_a).properties(width="container", height=190)
-
-# 11.6 cómo lo sabemos del modelo: la comparación con media y desvío
-comp = [{"modelo": r["modelo"], "r2": r["r2"], "lo": r["r2"] - r["desvio"], "hi": r["r2"] + r["desvio"],
-         "tipo": "piso" if r in pisos else ("elegido" if r["modelo"] == ELEGIDO else "modelo")}
-        for r in pisos + comparacion]
-orden_c = [c["modelo"] for c in sorted(comp, key=lambda c: -c["r2"])]
-b_c = alt.Chart(alt.Data(values=comp))
-graf_comp = (b_c.mark_rule(strokeWidth=3, opacity=0.5).encode(
-                 x=alt.X("lo:Q", title="R² en validación (media ± desvío entre pedazos)"), x2="hi:Q",
-                 y=alt.Y("modelo:N", sort=orden_c, title=None),
-                 color=alt.Color("tipo:N", scale=alt.Scale(domain=["piso", "modelo", "elegido"],
-                                                           range=["#8a93a0", "#4b69ff", "#e8962e"]), legend=None))
-             + b_c.mark_point(filled=True, size=110).encode(
-                 x="r2:Q", y=alt.Y("modelo:N", sort=orden_c),
-                 color=alt.Color("tipo:N", scale=alt.Scale(domain=["piso", "modelo", "elegido"],
-                                                           range=["#8a93a0", "#4b69ff", "#e8962e"]), legend=None),
-                 tooltip=[alt.Tooltip("modelo:N"), alt.Tooltip("r2:Q", format=".3f", title="R²"),
-                          alt.Tooltip("lo:Q", format=".3f", title="− desvío"), alt.Tooltip("hi:Q", format=".3f", title="+ desvío")])
-             ).properties(width="container", height=230)
-
-graf_imp = (alt.Chart(alt.Data(values=IMPORTANCIA)).mark_bar(color="#4b69ff", cornerRadiusEnd=3, height=16)
-            .encode(x=alt.X("baja:Q", title="Cuánto baja el R² en la prueba al desordenar la columna"),
-                    y=alt.Y("columna:N", sort="-x", title=None),
-                    tooltip=[alt.Tooltip("columna:N"), alt.Tooltip("baja:Q", format=".3f"), alt.Tooltip("desvio:Q", format=".3f")])
-            ).properties(width="container", height=210)
-
-# 11.7 explorá: real contra predicho, filtrado por controles y por una época
-p_origen = alt.param(name="f_origen", value="todos")
-p_rareza = alt.param(name="f_rareza", value=-1)
-p_arma = alt.param(name="f_arma", value="todas")
-p_lado = alt.param(name="f_lado", value=-1)
-epoca = alt.selection_interval(name="epoca", encodings=["x"])
-filtro = ("(f_origen == 'todos' || datum.o == f_origen) && (f_rareza < 0 || datum.r == f_rareza)"
-          " && (f_arma == 'todas' || datum.a == f_arma) && (f_lado < 0 || datum.l == f_lado)")
-base_e = alt.Chart(skins).transform_calculate(fecha="toDate(datum.f)")
-nube = (base_e.transform_filter(filtro).transform_filter(epoca)
-        .mark_circle(size=22, opacity=0.6, stroke=None)
-        .encode(x=alt.X("y:Q", scale=alt.Scale(domain=[0, 100]), title="Percentil real"),
-                y=alt.Y("yh:Q", scale=alt.Scale(domain=[0, 100]), title="Percentil que dijo el modelo"),
-                color=alt.Color("o:N", scale=esc_origen, legend=alt.Legend(orient="top", title=None, columns=2)),
-                # Sin tooltip, Vega no detecta el punto bajo el mouse y la ficha no se actualiza;
-                # la página desactiva la ventanita de este gráfico (la ficha ya muestra todo).
-                tooltip=alt.Tooltip("n:N")))
-diag = (alt.Chart(alt.Data(values=[{"x": 0, "y": 0}, {"x": 100, "y": 100}]))
-        .mark_line(color="#8a93a0", strokeDash=[5, 4]).encode(x="x:Q", y="y:Q"))
-zona = (alt.Chart(alt.Data(values=[{"t": "Arriba de la línea: el modelo lo pone más caro"}]))
-        .mark_text(align="left", baseline="top", color="#8a93a0", fontSize=11).encode(x=alt.value(8), y=alt.value(6), text="t:N"))
-graf_nube = (diag + nube + zona).properties(width="container", height=420)
-linea_tiempo = (base_e.transform_filter(filtro)
-                .mark_bar(width=4, opacity=0.9)
-                .encode(x=alt.X("yearmonth(fecha):T", title="Lanzamiento de la colección (arrastrá para elegir una época)",
-                                axis=alt.Axis(format="%Y", tickCount=12)),
-                        y=alt.Y("count():Q", title="Skins"),
-                        color=alt.Color("o:N", scale=esc_origen, legend=None))
-                .add_params(epoca).properties(width="container", height=110))
-graf_explora = alt.vconcat(graf_nube, linea_tiempo, spacing=18).add_params(p_origen, p_rareza, p_arma, p_lado) \
-    .resolve_scale(color="shared")
-
-# 11.8 probá el modelo: dónde cae el skin fabricado en la escalera del mercado
-p_pred = alt.param(name="pred", value=50)
-p_lo = alt.param(name="lo", value=35)
-p_hi = alt.param(name="hi", value=65)
-fondo = (alt.Chart(skins).transform_calculate(rareza=rareza_nombre)
-         .mark_tick(orient="vertical", thickness=1, opacity=0.35)
-         .encode(x=alt.X("q:Q", scale=alt.Scale(domain=[0, 100]), title="Posición en el mercado (percentil)"),
-                 color=alt.Color("rareza:N", scale=esc_rareza, legend=None)))
-uno = alt.Chart(alt.Data(values=[{}]))
-banda = uno.transform_calculate(a="lo", b="hi").mark_rect(color="#e8962e", opacity=0.18).encode(x="a:Q", x2="b:Q")
-marca = uno.transform_calculate(a="pred").mark_rule(color="#e8962e", strokeWidth=3).encode(x="a:Q")
-punta = uno.transform_calculate(a="pred").mark_point(shape="triangle-down", size=260, filled=True, color="#e8962e") \
-    .encode(x="a:Q", y=alt.value(-6))
-graf_proba = (fondo + banda + marca + punta).add_params(p_pred, p_lo, p_hi).properties(width="container", height=90)
-
-ESPECS = {k: v.to_dict() for k, v in {
-    "tira": tira, "datos": graf_datos, "hallazgo": graf_hallazgo, "modelo": graf_modelo, "armory": graf_armory,
-    "comparacion": graf_comp, "importancia": graf_imp, "explora": graf_explora, "proba": graf_proba}.items()}
-
-# ================================================================ 12 · textos y página
+# Regla de todos los gráficos: cada uno muestra UNA idea, y esa idea está escrita adentro del
+# gráfico (un rótulo, una flecha, un número), no sólo en el texto de al lado.
 def n(x, d=0):
     s = f"{x:,.{d}f}"
     return s.replace(",", "§").replace(".", ",").replace("§", ".")
@@ -601,6 +574,383 @@ def n(x, d=0):
 def pct(x):
     return f"{n(x)} %"
 
+
+def usd(x):
+    return "USD " + (n(x, 2) if x < 100 else n(x, 0))
+
+
+COL_RAREZA = ["#9fb3cc", "#5e98d9", "#4b69ff", "#8847ff", "#d32ce6", "#eb4b4b"]   # los colores de CS2
+# Un color, un rol, en toda la página (también en el CSS y en el glosario, que salen de acá):
+# rareza → COL_RAREZA · modelo elegido y su predicción → AMBAR · origen → COL_ORIGEN ·
+# Armory → ARMORY · todos juntos, el resto, pisos y referencias → GRIS.
+# Viejas contra nuevas (validación/prueba, aprendió/encontró) NO va con color sino con forma:
+# círculo lleno = viejas, triángulo hueco = nuevas.
+COL_ORIGEN = ["#26b5c7", "#9a724a", "#cea8d5", "#6f6a64"]   # caja, drop de mapa, paquete souvenir, sin identificar
+GRIS, ARMORY, AMBAR = "#919191", "#ffab91", "#e8962e"   # gris neutro: ΔE ≥ 15 contra Industrial y «sin identificar»
+FORMA_VIEJAS, FORMA_NUEVAS = "circle", "triangle-left"
+esc_rareza = alt.Scale(domain=RAREZAS, range=COL_RAREZA)
+esc_origen = alt.Scale(domain=ORIGENES, range=COL_ORIGEN)
+esc_era = alt.Scale(domain=[ERA_PRE, ERA_ARM], range=[GRIS, ARMORY])
+skins = alt.NamedData("skins")
+rareza_nombre = "['Consumer Grade','Industrial Grade','Mil-Spec Grade','Restricted','Classified','Covert'][datum.r]"
+corta = "split(datum.label, ' ')[0]"
+EJE_USD = "'USD ' + format(datum.value, ',~r')"
+EJE_PUESTO = "datum.value == 0 ? '0 · el más barato' : datum.value == 100 ? 'el más caro · 100' : datum.value"
+datos = lambda filas: alt.Data(values=filas)
+
+# 11.1 portada: la escalera de la rareza. Una fila por rareza; cada raya es un skin.
+med_rar = (df.groupby("rarity_orden").agg(med=("q", "median"), usd=("sell_price_usd", "median")).reset_index())
+med_rar["rareza"] = med_rar["rarity_orden"].map(dict(enumerate(RAREZAS)))
+med_rar["t"] = [f"mitad: puesto {n(m)} · {usd(u)}" for m, u in zip(med_rar["med"], med_rar["usd"])]
+y_esc = alt.Y("rareza:N", sort=RAREZAS[::-1], title=None,
+              axis=alt.Axis(labelExpr=corta, labelFontSize=12.5, labelFontWeight=600, labelPadding=8, ticks=False, domain=False))
+x_puesto = alt.X("q:Q", scale=alt.Scale(domain=[0, 100], nice=False), title=None,
+                 axis=alt.Axis(values=[0, 25, 50, 75, 100], labelExpr=EJE_PUESTO, grid=True))
+rayas = (alt.Chart(skins).transform_calculate(rareza=rareza_nombre)
+         .mark_tick(thickness=1, opacity=0.35, size=20)
+         .encode(x=x_puesto, y=y_esc, color=alt.Color("rareza:N", scale=esc_rareza, legend=None),
+                 tooltip=[alt.Tooltip("n:N", title="Skin"), alt.Tooltip("p:Q", title="USD", format=",.2f")]))
+mitad = (alt.Chart(datos(med_rar.to_dict(orient="records")))
+         .mark_point(shape="diamond", filled=True, size=230, stroke="#ffffff", strokeWidth=1.5, opacity=1)
+         .encode(x=alt.X("med:Q"), y=y_esc, color=alt.Color("rareza:N", scale=esc_rareza, legend=None),
+                 tooltip=[alt.Tooltip("rareza:N"), alt.Tooltip("med:Q", title="Puesto de la mitad", format=".0f"),
+                          alt.Tooltip("usd:Q", title="Precio de la mitad", format=",.2f")]))
+mitad_t = (alt.Chart(datos(med_rar.to_dict(orient="records")))
+           .mark_text(dy=-17, fontSize=11.5, fontWeight=600).encode(x="med:Q", y=y_esc, text="t:N"))
+tira = (rayas + mitad + mitad_t).properties(width="container", height=6 * 52)
+
+# 11.2 los datos: cuántos skins hay en cada rango de precio
+mediana_precio = float(np.median(df["sell_price_usd"]))
+p90_precio = float(np.quantile(df["sell_price_usd"], 0.9))
+base_hist = (alt.Chart(skins).transform_calculate(lp="log(datum.p)/LN10")
+             .transform_bin("lp_bin", "lp", bin=alt.Bin(step=0.1, extent=[-1.6, 3.4])))
+hist = (base_hist.mark_bar(color=GRIS, cornerRadiusTopLeft=2, cornerRadiusTopRight=2)
+        .encode(x=alt.X("lp_bin:Q", bin="binned", scale=alt.Scale(domain=[-1.6, 3.4]),
+                        axis=alt.Axis(values=[-1, 0, 1, 2, 3], labelExpr="'USD ' + format(pow(10, datum.value), ',~r')"),
+                        title="Precio en Steam (cada marca vale 10 veces la anterior)"),
+                x2="lp_bin_end:Q",
+                y=alt.Y("count():Q", title="Cantidad de skins"),
+                tooltip=[alt.Tooltip("count():Q", title="Skins")]))
+marcas = [{"lp": float(np.log10(mediana_precio)), "t": f"La mitad cuesta menos de {usd(mediana_precio)}", "a": "right", "dx": -6},
+          {"lp": float(np.log10(p90_precio)), "t": f"1 de cada 10 cuesta más de {usd(p90_precio)}", "a": "left", "dx": 6}]
+# sin color propio: toman el del texto del tema (--ink), así no se leen como «modelo»
+reglas = alt.Chart(datos(marcas)).mark_rule(strokeDash=[4, 3], strokeWidth=1.5).encode(x="lp:Q")
+rotulos = [alt.Chart(datos([m])).mark_text(align=m["a"], dx=m["dx"], fontWeight=600)
+           .encode(x="lp:Q", y=alt.value(12), text="t:N") for m in marcas]
+graf_datos = alt.layer(hist, reglas, *rotulos).properties(width="container", height=240)
+
+# 11.2b por qué tanta diferencia: la escalera de la rareza en dólares, dentro de las cajas
+y_caja = alt.Y("rareza:N", sort=[r["rareza"] for r in CAJA_RAREZA][::-1], title=None,
+               axis=alt.Axis(labelExpr=corta, labelFontSize=12.5, labelFontWeight=600, ticks=False, domain=False))
+x_usd = alt.X("p25:Q", scale=alt.Scale(type="log", domain=[0.1, 600]), title="Precio en Steam (escala de 10 en 10)",
+              axis=alt.Axis(values=[0.1, 1, 10, 100], labelExpr=EJE_USD))
+for r in CAJA_RAREZA:
+    r["t"] = f"mitad: {usd(r['med'])}"
+    r["paso_t"] = f"× {n(r['paso'], 0)} que la rareza de abajo" if "paso" in r else "la rareza más barata de las cajas"
+b_cr = alt.Chart(datos(CAJA_RAREZA))
+graf_precios = alt.layer(
+    b_cr.mark_bar(height=16, opacity=0.35, cornerRadius=3).encode(
+        x=x_usd, x2="p75:Q", y=y_caja,
+        color=alt.Color("rareza:N", scale=esc_rareza, legend=None),
+        tooltip=[alt.Tooltip("rareza:N"), alt.Tooltip("p25:Q", title="Un cuarto cuesta menos de", format=",.2f"),
+                 alt.Tooltip("med:Q", title="La mitad cuesta menos de", format=",.2f"),
+                 alt.Tooltip("p75:Q", title="Tres cuartos cuestan menos de", format=",.2f"), alt.Tooltip("skins:Q")]),
+    b_cr.mark_point(filled=True, size=200, opacity=1, stroke="#ffffff", strokeWidth=1.5).encode(
+        x="med:Q", y=y_caja, color=alt.Color("rareza:N", scale=esc_rareza, legend=None)),
+    b_cr.mark_text(dy=-18, fontWeight=600, fontSize=12).encode(x="med:Q", y=y_caja, text="t:N"),
+    b_cr.mark_text(align="left", dx=10, color=GRIS, fontSize=11.5).encode(x="p75:Q", y=y_caja, text="paso_t:N"),
+).properties(width="container", height=4 * 58)
+
+# 11.3 lo que encontramos (1): la rareza ordena el precio dentro de cada origen
+med_ro = (df.groupby(["origen", "rarity_orden"])["q"].agg(["median", "size"]).reset_index()
+            .query("size >= 20"))
+med_ro["rareza"] = med_ro["rarity_orden"].map(dict(enumerate(RAREZAS)))
+med_todos = df.groupby("rarity_orden")["q"].agg(["median", "size"]).reset_index()
+med_todos["rareza"] = med_todos["rarity_orden"].map(dict(enumerate(RAREZAS)))
+med_todos["origen"] = "todos juntos"
+x_r = alt.X("rareza:N", sort=RAREZAS, title="Rareza (de la más común a la más rara →)",
+            axis=alt.Axis(labelAngle=0, labelExpr=corta, labelFontWeight=600))
+y_r = alt.Y("median:Q", scale=alt.Scale(domain=[0, 100]), title="Puesto típico en el mercado (0 a 100)")
+tip_r = [alt.Tooltip("origen:N"), alt.Tooltip("rareza:N"), alt.Tooltip("median:Q", title="Puesto típico", format=".0f"),
+         alt.Tooltip("size:Q", title="Skins")]
+todos_l = (alt.Chart(datos(med_todos.to_dict(orient="records")))
+           .mark_line(strokeDash=[6, 4], strokeWidth=2, color=GRIS, point=alt.OverlayMarkDef(color=GRIS, size=40))
+           .encode(x=x_r, y=y_r, tooltip=tip_r))
+lineas_r = (alt.Chart(datos(med_ro.to_dict(orient="records")))
+            .mark_line(point=alt.OverlayMarkDef(size=70, filled=True))
+            .encode(x=x_r, y=y_r,
+                    color=alt.Color("origen:N", scale=esc_origen,
+                                    legend=alt.Legend(orient="top", title="Cómo se consigue:", direction="horizontal")),
+                    strokeWidth=alt.condition("datum.origen == 'caja'", alt.value(4.5), alt.value(2)),
+                    tooltip=tip_r))
+c_cons = float(med_todos.loc[med_todos["rarity_orden"] == 0, "median"].iloc[0])
+nota_gris = alt.layer(*[
+    alt.Chart(datos([{"rareza": RAREZAS[3], "median": y, "t": t}]))
+    .mark_text(align="left", dx=-30, color=GRIS, fontSize=11.5, fontWeight=w).encode(x=x_r, y="median:Q", text="t:N")
+    for t, y, w in (("Línea gris punteada: todos los orígenes mezclados.", 17, 700),
+                    ("Se quiebra en Mil-Spec porque los Consumer", 10, 400),
+                    ("no salen de cajas, sino de mapas viejos.", 4, 400))])
+graf_hallazgo = (todos_l + lineas_r + nota_gris).properties(width="container", height=320)
+MED_RO = {(o, int(r)): float(m) for o, r, m in zip(med_ro["origen"], med_ro["rarity_orden"], med_ro["median"])}
+
+# 11.3b lo que encontramos (2): el Armory, colección por colección
+fin_snap = SNAPSHOT
+eras = [{"a": col_mapa["fecha"].min(), "b": ARMORY_DESDE.strftime("%Y-%m-%d"), "y": ARM["q_pre"],
+         "t": f"Antes del Armory: puesto típico {n(ARM['q_pre'])} ({usd(ARM['usd_pre'])})", "al": "left", "x": "2015-11-01", "dy": -9},
+        {"a": ARMORY_DESDE.strftime("%Y-%m-%d"), "b": fin_snap, "y": ARM["q_arm"],
+         "t": f"Armory: puesto típico {n(ARM['q_arm'])} ({usd(ARM['usd_arm'])}) →", "al": "right",
+         "x": ARMORY_DESDE.strftime("%Y-%m-%d"), "dy": 4}]
+x_f = alt.X("fecha:T", title="Año en que salió la colección", axis=alt.Axis(format="%Y", tickCount=12))
+zona_arm = alt.Chart(datos([{"a": ARMORY_DESDE.strftime("%Y-%m-%d"), "b": fin_snap}])) \
+    .mark_rect(color=ARMORY, opacity=0.10).encode(x="a:T", x2="b:T")
+zona_t = alt.Chart(datos([{"a": ARMORY_DESDE.strftime("%Y-%m-%d"), "t": "Llega el Armory →"}])) \
+    .mark_text(align="right", dx=-6, color=ARMORY, fontWeight=700, fontSize=12).encode(x="a:T", y=alt.value(12), text="t:N")
+pts_col = (alt.Chart(datos(col_mapa.to_dict(orient="records")))
+           .mark_circle(opacity=0.85, stroke="#ffffff", strokeWidth=0.6)
+           .encode(x=x_f,
+                   y=alt.Y("med:Q", scale=alt.Scale(domain=[0, 100]), title="Puesto típico de sus skins (0 a 100)"),
+                   size=alt.Size("skins:Q", scale=alt.Scale(range=[30, 380]), legend=None),
+                   color=alt.Color("era:N", scale=esc_era, legend=alt.Legend(orient="top", title=None)),
+                   tooltip=[alt.Tooltip("nombre:N", title="Colección"), alt.Tooltip("fecha:T", format="%m/%Y", title="Salió"),
+                            alt.Tooltip("med:Q", format=".0f", title="Puesto típico"),
+                            alt.Tooltip("usd:Q", format=",.2f", title="Precio típico (USD)"), alt.Tooltip("skins:Q")]))
+lin_era = alt.Chart(datos(eras)).mark_rule(strokeDash=[5, 4], strokeWidth=2).encode(
+    x="a:T", x2="b:T", y="y:Q", color=alt.Color("t:N", scale=alt.Scale(range=[GRIS, ARMORY]), legend=None))
+txt_era = [alt.Chart(datos([e])).mark_text(align=e["al"], dx=-8 if i else 0, dy=e["dy"], fontWeight=700, fontSize=12,
+                                            color=GRIS if i == 0 else ARMORY)
+           .encode(x="x:T", y="y:Q", text="t:N") for i, e in enumerate(eras)]
+graf_armory_tiempo = alt.layer(zona_arm, zona_t, lin_era, pts_col, *txt_era).properties(width="container", height=300)
+
+# 11.3c lo que encontramos (3): la misma rareza, antes y con el Armory
+for r in RAR_MAPA:
+    r["t"] = f"{n(r['veces'], 0)} veces más barato"
+y_rm = alt.Y("rareza:N", sort=[r["rareza"] for r in RAR_MAPA][::-1], title=None,
+             axis=alt.Axis(labelExpr=corta, labelFontSize=12.5, labelFontWeight=600, ticks=False, domain=False))
+x_rm = alt.Scale(type="log", domain=[0.02, 2000])
+largo_rm = [{"rareza": r["rareza"], "era": e, "usd": r[k]} for r in RAR_MAPA for e, k in ((ERA_PRE, "antes"), (ERA_ARM, "armory"))]
+b_rm = alt.Chart(datos(RAR_MAPA))
+graf_armory_rareza = alt.layer(
+    b_rm.mark_rule(strokeWidth=3, color=GRIS, opacity=0.5).encode(
+        x=alt.X("armory:Q", scale=x_rm, title="Precio típico de un skin de drop de mapa (escala de 10 en 10)",
+                axis=alt.Axis(values=[0.1, 1, 10, 100, 1000], labelExpr=EJE_USD)), x2="antes:Q", y=y_rm),
+    alt.Chart(datos(largo_rm)).mark_point(filled=True, size=190, opacity=1).encode(
+        x="usd:Q", y=y_rm, color=alt.Color("era:N", scale=esc_era, legend=alt.Legend(orient="top", title=None)),
+        tooltip=[alt.Tooltip("rareza:N"), alt.Tooltip("era:N"), alt.Tooltip("usd:Q", title="Precio típico (USD)", format=",.2f")]),
+    b_rm.mark_text(align="left", dx=12, fontWeight=700, color=ARMORY, fontSize=12).encode(x="antes:Q", y=y_rm, text="t:N"),
+).properties(width="container", height=len(RAR_MAPA) * 46)
+
+# 11.4 el modelo: validación contra prueba. Color = qué forma de predecir (el elegido en ámbar,
+# las referencias en gris); forma = colecciones viejas (círculo lleno) o nuevas (triángulo hueco).
+MOMENTOS = ["En colecciones viejas que no vio (validación)", f"En las {test['collection'].nunique()} colecciones más nuevas (prueba)"]
+prueba_largo = []
+for r in PRUEBA:
+    tipo = "elegido" if r["modelo"] == ELEGIDO else "referencia"
+    prueba_largo += [{"modelo": r["modelo"], "momento": MOMENTOS[0], "r2": r["validacion"], "orden": 0, "tipo": tipo},
+                     {"modelo": r["modelo"], "momento": MOMENTOS[1], "r2": r["prueba"], "orden": 1, "tipo": tipo}]
+orden_mod = [r["modelo"] for r in PRUEBA][::-1]
+col_tipo = alt.Color("tipo:N", scale=alt.Scale(domain=["elegido", "referencia"], range=[AMBAR, GRIS]), legend=None)
+
+
+def puntos_viejas_nuevas(base, campo, dominio, x, y, color, tooltip):
+    """Círculo lleno = viejas, triángulo hueco = nuevas, con una leyenda de formas que se ve igual.
+
+    La capa de abajo dibuja las dos formas huecas y lleva la leyenda; la de arriba rellena los
+    círculos con su color. Vega-Lite dibuja huecos todos los símbolos de la leyenda de una marca
+    hueca: la página rellena el del círculo (ver «usermeta.viejas» en la plantilla)."""
+    leyenda = alt.Legend(orient="top", title=None, direction="vertical", symbolStrokeColor=GRIS, symbolStrokeWidth=2)
+    formas = base.mark_point(size=170, strokeWidth=2.5, opacity=1).encode(
+        x=x, y=y, color=color,
+        shape=alt.Shape(f"{campo}:N", scale=alt.Scale(domain=dominio, range=[FORMA_VIEJAS, FORMA_NUEVAS]), legend=leyenda),
+        tooltip=tooltip)
+    # filled=True: el relleno sale del canal color, sin tocar la escala de relleno de la leyenda
+    llenos = base.transform_filter(f"datum.{campo} == '{dominio[0]}'").mark_point(
+        shape=FORMA_VIEJAS, filled=True, size=170, strokeWidth=2.5, opacity=1).encode(x=x, y=y, color=color, tooltip=tooltip)
+    return formas + llenos
+
+
+b_m = alt.Chart(datos(prueba_largo))
+lineas_m = b_m.mark_line(strokeWidth=2, opacity=0.6).encode(
+    x=alt.X("r2:Q", scale=alt.Scale(domain=[-0.2, 0.7]), title="R²: cuánto del orden de precios explica (0 = nada, 1 = todo)"),
+    y=alt.Y("modelo:N", sort=orden_mod, title=None, axis=alt.Axis(labelFontWeight=600, labelLimit=220)),
+    color=col_tipo, detail="modelo:N", order="orden:Q")
+pts_m = puntos_viejas_nuevas(
+    b_m, "momento", MOMENTOS, "r2:Q", alt.Y("modelo:N", sort=orden_mod), col_tipo,
+    [alt.Tooltip("modelo:N"), alt.Tooltip("momento:N"), alt.Tooltip("r2:Q", title="R²", format=".3f")])
+txt_m = b_m.mark_text(dy=-15, fontWeight=600).encode(x="r2:Q", y=alt.Y("modelo:N", sort=orden_mod),
+                                                     text=alt.Text("r2:Q", format=".2f"))
+cero = alt.Chart(datos([{"x": 0}])).mark_rule(color=GRIS, strokeDash=[2, 3]).encode(x="x:Q")
+graf_modelo = alt.layer(cero, lineas_m, pts_m, txt_m).properties(width="container", height=220,
+                                                               usermeta={"viejas": MOMENTOS[0]})
+
+# 11.4b el modelo: dónde se equivoca en la prueba. El Armory, arriba de la diagonal.
+GRUPO_ARM, GRUPO_RESTO = "Skins de drop de mapa del Armory", "Todos los demás de la prueba"
+arriba = (alt.Chart(datos([{"x": 0, "y": 0, "y2": 100}, {"x": 100, "y": 100, "y2": 100}]))
+          .mark_area(color=ARMORY, opacity=0.07).encode(x="x:Q", y="y:Q", y2="y2:Q"))
+diag_e = (alt.Chart(datos([{"x": 0, "y": 0}, {"x": 100, "y": 100}]))
+          .mark_line(color=GRIS, strokeDash=[5, 4], strokeWidth=1.5).encode(x="x:Q", y="y:Q"))
+pts_e = (alt.Chart(skins).transform_filter("datum.l == 1")
+         .transform_calculate(grupo=f"datum.o == 'drop de mapa' && datum.f >= '{ARMORY_DESDE:%Y-%m-%d}' ? '{GRUPO_ARM}' : '{GRUPO_RESTO}'",
+                              primero="datum.grupo == '" + GRUPO_ARM + "' ? 1 : 0")
+         .mark_circle(size=24, opacity=0.65)
+         .encode(x=alt.X("y:Q", scale=alt.Scale(domain=[0, 100]), title="Puesto real en el mercado"),
+                 y=alt.Y("yh:Q", scale=alt.Scale(domain=[0, 100]), title="Puesto que dijo el modelo"),
+                 color=alt.Color("grupo:N", scale=alt.Scale(domain=[GRUPO_ARM, GRUPO_RESTO], range=[ARMORY, GRIS]),
+                                 legend=alt.Legend(orient="top", title=None)),
+                 order=alt.Order("primero:Q"),
+                 tooltip=[alt.Tooltip("n:N", title="Skin"), alt.Tooltip("c:N", title="Colección"),
+                          alt.Tooltip("y:Q", title="Puesto real", format=".0f"), alt.Tooltip("yh:Q", title="Puesto del modelo", format=".0f"),
+                          alt.Tooltip("p:Q", title="Precio real (USD)", format=",.2f"), alt.Tooltip("ph:Q", title="Precio del modelo (USD)", format=",.2f")]))
+txt_e = alt.layer(
+    alt.Chart(datos([{"t": "Zona salmón, arriba de la línea: el modelo lo pone más caro de lo que vale"}]))
+    .mark_text(align="left", baseline="top", color=ARMORY, fontWeight=700, fontSize=12).encode(x=alt.value(10), y=alt.value(8), text="t:N"),
+    alt.Chart(datos([{"x": 99, "y": 2, "t": "Sobre la línea punteada: acierta. Debajo: lo pone más barato"}]))
+    .mark_text(align="right", baseline="bottom", color=GRIS, fontWeight=600, fontSize=11.5).encode(x="x:Q", y="y:Q", text="t:N"))
+graf_error = alt.layer(arriba, diag_e, pts_e, txt_e).properties(width="container", height=400)
+
+# 11.5 el Armory en el modelo: lo que aprendió contra lo que encontró, por origen
+LADOS = {"entrenamiento": "Lo que aprendió (colecciones viejas)", "prueba": "Lo que encontró (colecciones nuevas)"}
+corr_g = [dict(c, lado=LADOS[c["lado"]]) for c in corrimiento]
+b_a = alt.Chart(datos(corr_g))
+y_a = alt.Y("origen:N", sort=ORIGENES, title=None, axis=alt.Axis(labelFontWeight=600))
+lin_a = b_a.mark_line(strokeWidth=3, opacity=0.6).encode(
+    x=alt.X("mediana:Q", scale=alt.Scale(domain=[0, 100]), title="Puesto típico en el mercado (0 a 100)"),
+    y=y_a, color=alt.Color("origen:N", scale=esc_origen, legend=None), detail="origen:N")
+pts_a = puntos_viejas_nuevas(
+    b_a, "lado", list(LADOS.values()), "mediana:Q", y_a, alt.Color("origen:N", scale=esc_origen, legend=None),
+    [alt.Tooltip("origen:N"), alt.Tooltip("lado:N"), alt.Tooltip("mediana:Q", format=".1f", title="Puesto típico"),
+     alt.Tooltip("filas:Q", title="Skins"), alt.Tooltip("sesgo:Q", format="+.1f", title="Error medio del modelo")])
+txt_a = b_a.mark_text(dy=-15, fontWeight=600, fontSize=11.5).encode(x="mediana:Q", y=y_a, text=alt.Text("mediana:Q", format=".0f"))
+graf_armory = (lin_a + pts_a + txt_a).properties(width="container", height=220,
+                                                usermeta={"viejas": LADOS["entrenamiento"]})
+
+# 11.4c el modelo, paso 2: la partición en el tiempo. Forma = de qué lado quedó (círculo lleno:
+# entrenamiento; triángulo hueco: prueba). Color = Armory o no, igual que en el resto de la página.
+LADO_TR, LADO_TE = "Entrenamiento (las vio)", "Prueba (nunca las vio)"
+for p_ in PARTICION:
+    p_["lado_txt"] = LADO_TR if p_["lado"] == "entrenamiento" else LADO_TE
+esc_grupo = alt.Scale(domain=[COL_ARM, COL_RESTO], range=[ARMORY, GRIS])
+b_p = alt.Chart(datos(PARTICION))
+x_p = alt.X("f:T", title="Año en que salió la colección", axis=alt.Axis(format="%Y", tickCount=12), scale=alt.Scale(padding=14))
+y_p = alt.Y("origen:N", sort=ORIGENES, title=None, axis=alt.Axis(labelFontWeight=600))
+pts_p = b_p.mark_point(strokeWidth=2, opacity=0.9).encode(
+    x=x_p, y=y_p,
+    size=alt.Size("filas:Q", scale=alt.Scale(range=[40, 520]), legend=None),
+    color=alt.Color("grupo:N", scale=esc_grupo, legend=alt.Legend(orient="top", title=None)),
+    fill=alt.condition("datum.lado == 'entrenamiento'", alt.Fill("grupo:N", scale=esc_grupo), alt.value("transparent")),
+    shape=alt.Shape("lado_txt:N", scale=alt.Scale(domain=[LADO_TR, LADO_TE], range=[FORMA_VIEJAS, FORMA_NUEVAS]),
+                    legend=alt.Legend(orient="top", title=None, symbolStrokeColor=GRIS, symbolStrokeWidth=2)),
+    tooltip=[alt.Tooltip("nombre:N", title="Colección"), alt.Tooltip("f:T", title="Salió", format="%m/%Y"),
+             alt.Tooltip("origen:N", title="Cómo se consigue"), alt.Tooltip("lado_txt:N", title="Lado"),
+             alt.Tooltip("filas:Q", title="Skins")])
+inicio_test = f"{test['collection_release'].min():%Y-%m-%d}"
+corte_p = alt.Chart(datos([{"f": inicio_test}])).mark_rule(strokeDash=[4, 3], strokeWidth=1.5).encode(x="f:T")
+corte_t = alt.Chart(datos([{"f": inicio_test, "t": "Desde acá, el modelo no vio nada →"}])) \
+    .mark_text(align="right", dx=-6, fontWeight=600, fontSize=11.5).encode(x="f:T", y=alt.value(-8), text="t:N")
+zona_p = alt.Chart(datos([{"a": ARMORY_DESDE.strftime("%Y-%m-%d"), "b": fin_snap}])) \
+    .mark_rect(color=ARMORY, opacity=0.08).encode(x="a:T", x2="b:T")
+graf_particion = alt.layer(zona_p, corte_p, corte_t, pts_p).properties(width="container", height=230,
+                                                                      usermeta={"viejas": LADO_TR})
+
+# 11.5b la prueba de la causa: con el Armory como origen propio, el error casi desaparece
+VER_SIN, VER_CON = "Sin avisarle (como lo entrenamos)", "Con el Armory como origen propio"
+def_largo = [dict(d, version_txt=VER_SIN if d["version"] == "sin" else VER_CON) for d in DEFENSA]
+orden_def = list(PARAMS_EXP["sin"].keys())
+esc_ver = alt.Scale(domain=[VER_SIN, VER_CON], range=[GRIS, ARMORY])
+b_d = alt.Chart(datos(def_largo))
+graf_defensa = alt.layer(
+    b_d.mark_bar(height=15, cornerRadiusEnd=3).encode(
+        x=alt.X("r2:Q", scale=alt.Scale(domain=[0, 1]), title=f"R² en la prueba (colecciones desde {CORTE_EXP:%m/%Y})"),
+        y=alt.Y("modelo:N", sort=orden_def, title=None, axis=alt.Axis(labelFontWeight=600, labelLimit=220)),
+        yOffset=alt.YOffset("version_txt:N", sort=[VER_SIN, VER_CON]),
+        color=alt.Color("version_txt:N", scale=esc_ver, legend=alt.Legend(orient="top", title=None, direction="vertical")),
+        tooltip=[alt.Tooltip("modelo:N"), alt.Tooltip("version_txt:N", title="Versión"),
+                 alt.Tooltip("r2:Q", title="R²", format=".3f"), alt.Tooltip("sesgo_mapa:Q", title="Error medio en drop de mapa", format="+.1f")]),
+    b_d.mark_text(align="left", dx=5, fontSize=11.5, fontWeight=600).encode(
+        x="r2:Q", y=alt.Y("modelo:N", sort=orden_def), yOffset=alt.YOffset("version_txt:N", sort=[VER_SIN, VER_CON]),
+        text=alt.Text("r2:Q", format=".2f")),
+    alt.Chart(datos([{"x": DEFENSA_TABLA}])).mark_rule(strokeDash=[4, 3], color=GRIS, strokeWidth=1.5).encode(x="x:Q"),
+    alt.Chart(datos([{"x": DEFENSA_TABLA, "t": f"Tabla de rareza y exterior: {n(DEFENSA_TABLA, 2)}"}]))
+    .mark_text(align="left", dx=5, color=GRIS, fontSize=11.5).encode(x="x:Q", y=alt.value(-8), text="t:N"),
+).properties(width="container", height=250)
+
+# 11.6 cómo lo sabemos del modelo: la comparación con media y desvío
+comp = [{"modelo": r["modelo"], "r2": r["r2"], "lo": r["r2"] - r["desvio"], "hi": r["r2"] + r["desvio"],
+         "tipo": "piso" if r in pisos else ("elegido" if r["modelo"] == ELEGIDO else "modelo")}
+        for r in pisos + comparacion]
+orden_c = [c["modelo"] for c in sorted(comp, key=lambda c: -c["r2"])]
+b_c = alt.Chart(datos(comp))
+col_c = alt.Color("tipo:N", scale=alt.Scale(domain=["piso", "modelo", "elegido"], range=[GRIS, GRIS, AMBAR]), legend=None)
+graf_comp = alt.layer(
+    b_c.mark_rule(strokeWidth=3, opacity=0.6).encode(
+        x=alt.X("lo:Q", title="R² en validación (media ± desvío entre pedazos)"), x2="hi:Q",
+        y=alt.Y("modelo:N", sort=orden_c, title=None), color=col_c,
+        strokeDash=alt.condition("datum.tipo == 'piso'", alt.value([3, 3]), alt.value([1, 0]))),
+    b_c.mark_point(size=110, strokeWidth=2, opacity=1).encode(
+        x="r2:Q", y=alt.Y("modelo:N", sort=orden_c), color=col_c,
+        fill=alt.condition("datum.tipo == 'piso'", alt.value("transparent"), col_c),
+        tooltip=[alt.Tooltip("modelo:N"), alt.Tooltip("r2:Q", format=".3f", title="R²"),
+                 alt.Tooltip("lo:Q", format=".3f", title="− desvío"), alt.Tooltip("hi:Q", format=".3f", title="+ desvío")]),
+).properties(width="container", height=230)
+
+graf_imp = (alt.Chart(datos(IMPORTANCIA)).mark_bar(color=AMBAR, cornerRadiusEnd=3, height=16)
+            .encode(x=alt.X("baja:Q", title="Cuánto empeora el modelo si le borramos esa columna (baja del R²)"),
+                    y=alt.Y("columna:N", sort="-x", title=None, axis=alt.Axis(labelFontWeight=600)),
+                    tooltip=[alt.Tooltip("columna:N"), alt.Tooltip("baja:Q", format=".3f"), alt.Tooltip("desvio:Q", format=".3f")])
+            ).properties(width="container", height=210)
+
+# 11.7 explorá: todos los skins, por año y por precio, con los colores del juego
+p_origen = alt.param(name="f_origen", value="todos")
+p_rareza = alt.param(name="f_rareza", value=-1)
+p_arma = alt.param(name="f_arma", value="todas")
+p_var = alt.param(name="f_var", value="todas")
+filtro = ("(f_origen == 'todos' || datum.o == f_origen) && (f_rareza < 0 || datum.r == f_rareza)"
+          " && (f_arma == 'todas' || datum.a == f_arma) && (f_var == 'todas' || datum.v == f_var)")
+precio_min, precio_max = float(df["sell_price_usd"].min()), float(df["sell_price_usd"].max())
+zona_e = alt.Chart(datos([{"a": ARMORY_DESDE.strftime("%Y-%m-%d"), "b": fin_snap}])) \
+    .mark_rect(color=ARMORY, opacity=0.08).encode(x="a:T", x2="b:T")
+zona_et = alt.Chart(datos([{"a": ARMORY_DESDE.strftime("%Y-%m-%d"), "t": "Armory"}])) \
+    .mark_text(align="left", dx=6, color=ARMORY, fontWeight=700, fontSize=12).encode(x="a:T", y=alt.value(12), text="t:N")
+nube = (alt.Chart(skins).transform_filter("datum.f != ''").transform_filter(filtro)
+        .transform_calculate(fecha="time(toDate(datum.f)) + datum.j * 86400000", rareza=rareza_nombre)
+        .mark_circle(size=18, opacity=0.8, stroke=None)
+        .encode(x=alt.X("fecha:T", title="Año en que salió la colección", axis=alt.Axis(format="%Y", tickCount=14, grid=False)),
+                y=alt.Y("p:Q", scale=alt.Scale(type="log", domain=[precio_min * 0.8, precio_max * 1.25], nice=False),
+                        title="Precio en Steam (escala de 10 en 10)",
+                        axis=alt.Axis(values=[0.1, 1, 10, 100, 1000], labelExpr=EJE_USD)),
+                color=alt.Color("rareza:N", scale=esc_rareza,
+                                legend=alt.Legend(orient="top", title=None, symbolType="circle", labelExpr=corta)),
+                order=alt.Order("r:Q"),
+                # Sin tooltip, Vega no detecta el punto bajo el mouse y la ficha no se actualiza;
+                # la página desactiva la ventanita de este gráfico (la ficha ya muestra todo).
+                tooltip=alt.Tooltip("n:N")))
+graf_explora = alt.layer(zona_e, zona_et, nube).add_params(p_origen, p_rareza, p_arma, p_var) \
+    .properties(width="container", height=480)
+
+# 11.8 probá el modelo: dónde cae el skin fabricado en la escalera del mercado
+p_pred = alt.param(name="pred", value=50)
+p_lo = alt.param(name="lo", value=35)
+p_hi = alt.param(name="hi", value=65)
+fondo = (alt.Chart(skins).transform_calculate(rareza=rareza_nombre)
+         .mark_tick(orient="vertical", thickness=1, opacity=0.35)
+         .encode(x=alt.X("q:Q", scale=alt.Scale(domain=[0, 100]), title=None,
+                         axis=alt.Axis(values=[0, 25, 50, 75, 100], labelExpr=EJE_PUESTO)),
+                 color=alt.Color("rareza:N", scale=esc_rareza, legend=None)))
+uno = alt.Chart(datos([{}]))
+banda = uno.transform_calculate(a="lo", b="hi").mark_rect(color=AMBAR, opacity=0.18).encode(x="a:Q", x2="b:Q")
+marca = uno.transform_calculate(a="pred").mark_rule(color=AMBAR, strokeWidth=3).encode(x="a:Q")
+punta = uno.transform_calculate(a="pred").mark_point(shape="triangle-down", size=260, filled=True, color=AMBAR) \
+    .encode(x="a:Q", y=alt.value(-6))
+graf_proba = (fondo + banda + marca + punta).add_params(p_pred, p_lo, p_hi).properties(width="container", height=90)
+
+ESPECS = {k: v.to_dict() for k, v in {
+    "tira": tira, "datos": graf_datos, "precios": graf_precios, "hallazgo": graf_hallazgo,
+    "armory_tiempo": graf_armory_tiempo, "armory_rareza": graf_armory_rareza, "modelo": graf_modelo,
+    "error": graf_error, "armory": graf_armory, "comparacion": graf_comp, "importancia": graf_imp,
+    "particion": graf_particion, "defensa": graf_defensa,
+    "explora": graf_explora, "proba": graf_proba}.items()}
+
+
+# ================================================================ 12 · textos y página
 
 def con_mayuscula(texto):
     return re.sub(r"^((?:<[^>]+>)*)([a-záéíóúñ])", lambda m: m.group(1) + m.group(2).upper(), str(texto))
@@ -641,7 +991,8 @@ T["TEST_DESDE"] = f"{test['collection_release'].min():%m/%Y}"
 
 T["H2_D"], T["H2_PARES"], T["H2_MED"] = n(H2["d"], 2), n(H2["pares"]), n(H2["mediana"], 0)
 T["H3_RHO"], T["H3_SKINS"], T["H3_BAJA"] = n(H3["rho"], 2), n(H3["skins"]), n(H3["baja"])
-T["H4_R"], T["H4_FILAS"] = n(H4["r"], 2), n(H4["filas"])
+# Tres decimales: con dos, 0,1990 se leería «0,20» y no se vería por qué cae debajo del umbral de 0,2.
+T["H4_R"], T["H4_FILAS"] = n(H4["r"], 3), n(H4["filas"])
 T["MED_COVERT"], T["MED_CONSUMER"] = n(MEDIANA_RAREZA[5]), n(MEDIANA_RAREZA[0])
 T["MED_MILSPEC"], T["MED_CLASSIFIED"] = n(MEDIANA_RAREZA[2]), n(MEDIANA_RAREZA[4])
 T["SPEARMAN_RAREZA"] = n(SPEARMAN_RAREZA, 2)
@@ -702,9 +1053,70 @@ T["VERIFICADO"] = VERIFICADO
 T["SKLEARN"] = sklearn.__version__
 T["N_GRILLA_APP"] = n(len(grilla))
 
+# el precio y la rareza, en dólares
+T["PRECIO_P90"] = usd(p90_precio)
+cr = {r["rareza"]: r for r in CAJA_RAREZA}
+T["CAJA_MIL"], T["CAJA_COV"] = usd(cr["Mil-Spec Grade"]["med"]), usd(cr["Covert"]["med"])
+T["CAJA_VECES"] = n(cr["Covert"]["med"] / cr["Mil-Spec Grade"]["med"])
+T["CAJA_PASO_MIN"] = n(min(r["paso"] for r in CAJA_RAREZA if "paso" in r))
+T["CAJA_PASO_MAX"] = n(max(r["paso"] for r in CAJA_RAREZA if "paso" in r))
+# el Armory
+T["ARM_FECHA"] = ARMORY_DESDE.strftime("%d/%m/%Y")
+T["ARM_COL"], T["ARM_COL_PRE"] = str(ARM["col_arm"]), str(ARM["col_pre"])
+T["ARM_USD_PRE"], T["ARM_USD"] = usd(ARM["usd_pre"]), usd(ARM["usd_arm"])
+T["ARM_Q_PRE"], T["ARM_Q"] = n(ARM["q_pre"]), n(ARM["q_arm"])
+T["ARM_VECES"] = n(ARM["veces"])
+T["ARM_MIL_PRE"], T["ARM_MIL"] = usd(MILSPEC_MAPA["antes"]), usd(MILSPEC_MAPA["armory"])
+T["ARM_MIL_VECES"] = n(MILSPEC_MAPA["veces"])
+T["ARM_TEST_COL"], T["ARM_TRAIN_COL"] = str(ARM["test_col_arm"]), str(ARM["train_col_arm"])
+T["ARM_TEST_PCT"] = pct(ARM["test_pct_mapa_arm"])
+T["ARM_SESGO"], T["ARM_SESGO_RESTO"] = n(ARM["sesgo_mapa_arm"]), n(ARM["sesgo_resto"])
+T["ARM_CARO"] = pct(ARM["caro_mapa_arm"])
+T["ARM_Q_MAX"] = n(col_mapa.loc[col_mapa["armory"], "med"].max())
+# colores que la plantilla toma de las mismas constantes que los gráficos
+def texto_sobre(hexa):
+    """Texto oscuro sobre colores claros y blanco sobre oscuros (luminancia relativa)."""
+    r, g, b = (int(hexa[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    lin = lambda v: v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
+    return "#14181d" if 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b) > 0.2 else "#ffffff"
+
+
+cuadradito = lambda texto, hexa: f'<span class="cuadradito" style="--c:{hexa};--t:{texto_sobre(hexa)}">{texto}</span>'
+T["CHIPS_RAREZA"] = "".join(cuadradito(r.split(" ")[0], c) for r, c in zip(RAREZAS, COL_RAREZA))
+for clave, i in (("CAJA", 0), ("MAPA", 1), ("SOUVENIR", 2), ("SIN_ID", 3)):
+    T[f"CHIP_{clave}"] = cuadradito(ORIGENES[i][0].upper() + ORIGENES[i][1:], COL_ORIGEN[i])
+T["COL_COVERT"], T["COL_ARMORY"], T["COL_MODELO"], T["COL_GRIS"] = COL_RAREZA[5], ARMORY, AMBAR, GRIS
+MESES_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+T["ARM_MES"] = f"{MESES_ES[ARMORY_DESDE.month - 1]} de {ARMORY_DESDE.year}"
+T["IMP_1_PCT"] = pct(100 * IMPORTANCIA[0]["baja"] / sum(max(0, r["baja"]) for r in IMPORTANCIA))
+T["H3_MEDIA"] = n(H3["media"], 2)
+T["GRADIENTE_RAREZA"] = ", ".join(COL_RAREZA)
+T["SESGO_TEST0"] = n(SESGO_TEST, 0)
+
+# el modelo en el navegador: la alternativa que el instructivo admite (a menos de un desvío)
+T["R2_RIDGE"], T["DESVIO_ELEGIDO"] = n(res[REFERENCIA]["r2"], 3), n(res[ELEGIDO]["desvio"], 3)
+T["R2_ELEGIDO_DEF"] = n(res[ELEGIDO]["r2"], 3)
+T["DIF_RIDGE"] = n(res[ELEGIDO]["r2"] - res[REFERENCIA]["r2"], 3)
+
+# la prueba de la causa (sección 8c)
+defe = {(d["modelo"], d["version"]): d for d in DEFENSA}
+gb_sin, gb_con = defe[(ELEGIDO, "sin")], defe[(ELEGIDO, "con")]
+T["DEF_SIN"], T["DEF_CON"] = n(gb_sin["r2"], 2), n(gb_con["r2"], 2)
+T["DEF_SESGO_SIN"], T["DEF_SESGO_CON"] = n(gb_sin["sesgo_mapa"], 1), n(gb_con["sesgo_mapa"], 1)
+T["DEF_TABLA"] = n(DEFENSA_TABLA, 2)
+T["DEF_CORTE"] = f"{CORTE_EXP:%m/%Y}"
+T["DEF_TRAIN"], T["DEF_TEST"], T["DEF_COL_TEST"] = n(DEF_INFO["train"]), n(DEF_INFO["test"]), n(DEF_INFO["col_test"])
+T["DEF_ARM_TRAIN"] = n(DEF_INFO["arm_train"])
+signo = lambda x, d=1: ("+" if x >= 0 else "−") + n(abs(x), d)
+T["DEF_TABLA_FILAS"] = "".join(fila_tabla((m, n(defe[(m, "sin")]["r2"], 2), n(defe[(m, "con")]["r2"], 2),
+                                           signo(defe[(m, "sin")]["sesgo_mapa"]), signo(defe[(m, "con")]["sesgo_mapa"])))
+                               for m in orden_def)
+
 JS = {"SKINS": SKINS, "ESPECS": ESPECS, "GRILLA": GRILLA, "VISTOS": VISTOS, "ARMAS": ARMAS, "ORIGENES": ORIGENES,
       "CUANTILES": CUANTILES_PRECIO, "MAE_CV": round(MAE_CV, 2), "SESGO_MAPA": round(float(T["MAPA_SESGO"].replace(",", ".")), 1),
-      "COL_RAREZA": COL_RAREZA, "COL_ORIGEN": COL_ORIGEN}
+      "MAE_TEST": round(MAE_TEST, 2), "SESGO_TEST": round(SESGO_TEST, 1), "GANCHO": GANCHO,
+      "COL_RAREZA": COL_RAREZA, "COL_ORIGEN": COL_ORIGEN, "ARMORY_DESDE": ARMORY_DESDE.strftime("%Y-%m-%d"),
+      "IMAGENES": IMAGENES, "DISENOS": DISENOS}
 
 html = Path(args.plantilla).read_text(encoding="utf-8")
 for k, v in T.items():
@@ -719,4 +1131,5 @@ salida.write_text(html, encoding="utf-8")
 print(f"aplicación escrita en {salida} ({salida.stat().st_size / 1e6:.1f} MB)")
 print(json.dumps({"r2_cv": R2_CV, "desvio": DESVIO_CV, "r2_test": R2_TEST, "mae_test": MAE_TEST, "sesgo_test": SESGO_TEST,
                   "elegido": ELEGIDO, "mejores": MEJORES, "usd": USD, "h2": H2, "h3": H3, "h4": H4,
-                  "r2_oof": R2_OOF, "mediana_rareza": MEDIANA_RAREZA}, default=str, indent=1))
+                  "r2_oof": R2_OOF, "mediana_rareza": MEDIANA_RAREZA,
+                  "defensa": DEFENSA, "defensa_tabla": DEFENSA_TABLA}, default=str, indent=1))

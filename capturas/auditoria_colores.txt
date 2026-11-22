@@ -1,0 +1,242 @@
+==================================================================================================== 
+DÓNDE SE USA CADA COLOR
+====================================================================================================
+
+#4b69ff  [rareza · Mil-Spec]  (8 usos)
+   ESPECS.tira                  escala: «Mil-Spec Grade»
+   ESPECS.precios               escala: «Mil-Spec Grade»
+   ESPECS.explora               escala: «Mil-Spec Grade»
+   ESPECS.proba                 escala: «Mil-Spec Grade»
+   APP.COL_RAREZA               [2]
+   CSS/HTML                     l.449: …">Industrial</span><span class="cuadradito" style="--c:#4b69ff;--t:…
+
+#5e98d9  [rareza · Industrial]  (8 usos)
+   ESPECS.tira                  escala: «Industrial Grade»
+   ESPECS.precios               escala: «Industrial Grade»
+   ESPECS.explora               escala: «Industrial Grade»
+   ESPECS.proba                 escala: «Industrial Grade»
+   APP.COL_RAREZA               [1]
+   CSS/HTML                     l.449: …1d">Consumer</span><span class="cuadradito" style="--c:#5e98d9;--t:…
+
+#8847ff  [rareza · Restricted]  (10 usos)
+   ESPECS.tira                  escala: «Restricted»
+   ESPECS.precios               escala: «Restricted»
+   ESPECS.explora               escala: «Restricted»
+   ESPECS.proba                 escala: «Restricted»
+   APP.COL_RAREZA               [3]
+   CSS/HTML                     l.307: …vc { syntax: "<color>"; inherits: true; initial-value: #8847ff; }…
+   CSS/HTML                     l.309: …--vc: #8847ff; pos…
+   CSS/HTML                     l.449: …ff">Mil-Spec</span><span class="cuadradito" style="--c:#8847ff;--t:…
+
+#9fb3cc  [rareza · Consumer]  (8 usos)
+   ESPECS.tira                  escala: «Consumer Grade»
+   ESPECS.precios               escala: «Consumer Grade»
+   ESPECS.explora               escala: «Consumer Grade»
+   ESPECS.proba                 escala: «Consumer Grade»
+   APP.COL_RAREZA               [0]
+   CSS/HTML                     l.449: …iv class="rarezas"><span class="cuadradito" style="--c:#9fb3cc;--t:…
+
+#d32ce6  [rareza · Classified]  (8 usos)
+   ESPECS.tira                  escala: «Classified»
+   ESPECS.precios               escala: «Classified»
+   ESPECS.explora               escala: «Classified»
+   ESPECS.proba                 escala: «Classified»
+   APP.COL_RAREZA               [4]
+   CSS/HTML                     l.449: …">Restricted</span><span class="cuadradito" style="--c:#d32ce6;--t:…
+
+#eb4b4b  [rareza · Covert]  (9 usos)
+   ESPECS.tira                  escala: «Covert»
+   ESPECS.precios               escala: «Covert»
+   ESPECS.explora               escala: «Covert»
+   ESPECS.proba                 escala: «Covert»
+   APP.COL_RAREZA               [5]
+   CSS/HTML                     l.440: …<span><b style="--c:#eb4b4b">Vul…
+   CSS/HTML                     l.449: …">Classified</span><span class="cuadradito" style="--c:#eb4b4b;--t:…
+
+#e8962e  [modelo · modelo (ámbar)]  (11 usos)
+   ESPECS.modelo                escala: «elegido»
+   ESPECS.comparacion           escala: «elegido»
+   ESPECS.importancia           .mark.color
+   ESPECS.proba                 .layer[1].mark.color
+   ESPECS.proba                 .layer[2].mark.color
+   ESPECS.proba                 .layer[3].mark.color
+   CSS/HTML                     l.752: …kground:#e0c341"></span><span style="flex:7;background:#e8962e"></s…
+
+#f0a93b  [modelo · --accent]  (1 usos)
+   CSS/HTML                     l.22: …--accent: #f0a93b;    …
+
+#26b5c7  [origen · caja]  (6 usos)
+   ESPECS.hallazgo              escala: «caja»
+   ESPECS.armory                escala: «caja»
+   APP.COL_ORIGEN               [0]
+   CSS/HTML                     l.454: …ue (origen)</h3><p><span class="cuadradito" style="--c:#26b5c7;--t:…
+
+#6f6a64  [origen · sin identificar]  (6 usos)
+   ESPECS.hallazgo              escala: «sin identificar»
+   ESPECS.armory                escala: «sin identificar»
+   APP.COL_ORIGEN               [3]
+   CSS/HTML                     l.454: …>: de los torneos. <span class="cuadradito" style="--c:#6f6a64;--t:…
+
+#9a724a  [origen · drop de mapa]  (6 usos)
+   ESPECS.hallazgo              escala: «drop de mapa»
+   ESPECS.armory                escala: «drop de mapa»
+   APP.COL_ORIGEN               [1]
+   CSS/HTML                     l.454: …r de su colección. <span class="cuadradito" style="--c:#9a724a;--t:…
+
+#cea8d5  [origen · paquete souvenir]  (6 usos)
+   ESPECS.hallazgo              escala: «paquete souvenir»
+   ESPECS.armory                escala: «paquete souvenir»
+   APP.COL_ORIGEN               [2]
+   CSS/HTML                     l.454: …ando en el Armory. <span class="cuadradito" style="--c:#cea8d5;--t:…
+
+#ffab91  [armory · Armory]  (13 usos)
+   ESPECS.armory_tiempo         .layer[0].mark.color
+   ESPECS.armory_tiempo         .layer[1].mark.color
+   ESPECS.armory_tiempo         escala: «None»
+   ESPECS.armory_tiempo         escala: «Armory (desde oct. 2024)»
+   ESPECS.armory_tiempo         .layer[5].mark.color
+   ESPECS.armory_rareza         escala: «Armory (desde oct. 2024)»
+   ESPECS.armory_rareza         .layer[2].mark.color
+   ESPECS.error                 .layer[0].mark.color
+   ESPECS.error                 escala: «Skins de drop de mapa del Armory»
+   ESPECS.error                 .layer[3].layer[0].mark.color
+   ESPECS.explora               .layer[0].mark.color
+   ESPECS.explora               .layer[1].mark.color
+   CSS/HTML                     l.25: …--armory: #ffab91;   /…
+
+#919191  [gris · gris]  (28 usos)
+   ESPECS.datos                 .layer[0].mark.color
+   ESPECS.precios               .layer[3].mark.color
+   ESPECS.hallazgo              .layer[0].mark.color
+   ESPECS.hallazgo              .layer[0].mark.point.color
+   ESPECS.hallazgo              .layer[2].layer[0].mark.color
+   ESPECS.hallazgo              .layer[2].layer[1].mark.color
+   ESPECS.hallazgo              .layer[2].layer[2].mark.color
+   ESPECS.armory_tiempo         escala: «None»
+   ESPECS.armory_tiempo         escala: «Antes del Armory»
+   ESPECS.armory_tiempo         .layer[4].mark.color
+   ESPECS.armory_rareza         .layer[0].mark.color
+   ESPECS.armory_rareza         escala: «Antes del Armory»
+   ESPECS.modelo                .layer[0].mark.color
+   ESPECS.modelo                escala: «referencia»
+   ESPECS.modelo                .layer[2].layer[0].encoding.shape.legend.symbolStrokeColor
+   ESPECS.error                 .layer[1].mark.color
+   ESPECS.error                 escala: «Todos los demás de la prueba»
+   ESPECS.error                 .layer[3].layer[1].mark.color
+   ESPECS.armory                .layer[1].layer[0].encoding.shape.legend.symbolStrokeColor
+   ESPECS.comparacion           escala: «piso»
+   ESPECS.comparacion           escala: «modelo»
+   CSS/HTML                     l.26: …--ref: #919191;    …
+
+#0e1014  [— sin rol en la tabla —]  (1 usos)
+   CSS/HTML                     l.18: …--sunk: #0e1014;    …
+
+#13161b  [— sin rol en la tabla —]  (1 usos)
+   CSS/HTML                     l.16: …--bg: #13161b;    …
+
+#14181d  [— sin rol en la tabla —]  (8 usos)
+   CSS/HTML                     l.35: …: #eef0f3; --surface: #ffffff; --sunk: #e2e6eb; --ink: #14181d; --m…
+   CSS/HTML                     l.41: …: #eef0f3; --surface: #ffffff; --sunk: #e2e6eb; --ink: #14181d; --m…
+   CSS/HTML                     l.449: …rezas"><span class="cuadradito" style="--c:#9fb3cc;--t:#14181d">Con…
+   CSS/HTML                     l.454: …/h3><p><span class="cuadradito" style="--c:#26b5c7;--t:#14181d">Caj…
+
+#1a1206  [— sin rol en la tabla —]  (2 usos)
+   CSS/HTML                     l.23: …--accent-ink: #1a1206;…
+   CSS/HTML                     l.316: …: 0.08em; padding: 2px 8px; border-radius: 3px; color: #1a1206; bac…
+
+#1b1f26  [— sin rol en la tabla —]  (1 usos)
+   CSS/HTML                     l.17: …--surface: #1b1f26;    …
+
+#2b313a  [— sin rol en la tabla —]  (1 usos)
+   CSS/HTML                     l.21: …--line: #2b313a;…
+
+#3fb27f  [— sin rol en la tabla —]  (1 usos)
+   CSS/HTML                     l.751: …<span style="flex:7;background:#3fb27f"></s…
+
+#545e69  [— sin rol en la tabla —]  (2 usos)
+   CSS/HTML                     l.35: …ce: #ffffff; --sunk: #e2e6eb; --ink: #14181d; --muted: #545e69;…
+   CSS/HTML                     l.41: …ce: #ffffff; --sunk: #e2e6eb; --ink: #14181d; --muted: #545e69;…
+
+#9aa3ae  [— sin rol en la tabla —]  (2 usos)
+   CSS/HTML                     l.20: …--muted: #9aa3ae;…
+   CSS/HTML                     l.438: …<span><b style="--c:#9aa3ae">AK-…
+
+#9acd32  [— sin rol en la tabla —]  (1 usos)
+   CSS/HTML                     l.751: …kground:#3fb27f"></span><span style="flex:8;background:#9acd32"></s…
+
+#a8640a  [— sin rol en la tabla —]  (2 usos)
+   CSS/HTML                     l.36: …--line: #cfd5dc; --accent: #a8640a; --a…
+   CSS/HTML                     l.42: …--line: #cfd5dc; --accent: #a8640a; --a…
+
+#c2410c  [— sin rol en la tabla —]  (2 usos)
+   CSS/HTML                     l.36: …5dc; --accent: #a8640a; --accent-ink: #fff8ec; --warn: #c2410c;…
+   CSS/HTML                     l.42: …5dc; --accent: #a8640a; --accent-ink: #fff8ec; --warn: #c2410c;…
+
+#cf6a32  [— sin rol en la tabla —]  (1 usos)
+   CSS/HTML                     l.316: …x 8px; border-radius: 3px; color: #1a1206; background: #cf6a32; }…
+
+#cfd5dc  [— sin rol en la tabla —]  (2 usos)
+   CSS/HTML                     l.36: …--line: #cfd5dc; --a…
+   CSS/HTML                     l.42: …--line: #cfd5dc; --a…
+
+#d9534f  [— sin rol en la tabla —]  (1 usos)
+   CSS/HTML                     l.753: …<span style="flex:55;background:#d9534f"></s…
+
+#e0c341  [— sin rol en la tabla —]  (1 usos)
+   CSS/HTML                     l.752: …<span style="flex:23;background:#e0c341"></s…
+
+#e2e6eb  [— sin rol en la tabla —]  (2 usos)
+   CSS/HTML                     l.35: …--bg: #eef0f3; --surface: #ffffff; --sunk: #e2e6eb; --i…
+   CSS/HTML                     l.41: …--bg: #eef0f3; --surface: #ffffff; --sunk: #e2e6eb; --i…
+
+#e6e8eb  [— sin rol en la tabla —]  (1 usos)
+   CSS/HTML                     l.19: …--ink: #e6e8eb;…
+
+#eef0f3  [— sin rol en la tabla —]  (2 usos)
+   CSS/HTML                     l.35: …--bg: #eef0f3; --s…
+   CSS/HTML                     l.41: …--bg: #eef0f3; --s…
+
+#ff7a59  [— sin rol en la tabla —]  (1 usos)
+   CSS/HTML                     l.24: …--warn: #ff7a59;…
+
+#ffd700  [— sin rol en la tabla —]  (1 usos)
+   CSS/HTML                     l.317: ….sello-v.souvenir { background: #ffd700; }…
+
+#fff8ec  [— sin rol en la tabla —]  (2 usos)
+   CSS/HTML                     l.36: …--line: #cfd5dc; --accent: #a8640a; --accent-ink: #fff8ec; --w…
+   CSS/HTML                     l.42: …--line: #cfd5dc; --accent: #a8640a; --accent-ink: #fff8ec; --w…
+
+#ffffff  [— sin rol en la tabla —]  (9 usos)
+   ESPECS.tira                  .layer[1].mark.stroke
+   ESPECS.precios               .layer[1].mark.stroke
+   ESPECS.armory_tiempo         .layer[3].mark.stroke
+   CSS/HTML                     l.35: …--bg: #eef0f3; --surface: #ffffff; --s…
+   CSS/HTML                     l.41: …--bg: #eef0f3; --surface: #ffffff; --s…
+   CSS/HTML                     l.449: …</span><span class="cuadradito" style="--c:#4b69ff;--t:#ffffff">Mil…
+   CSS/HTML                     l.454: …cción. <span class="cuadradito" style="--c:#9a724a;--t:#ffffff">Dro…
+
+====================================================================================================
+CHEQUEOS
+====================================================================================================
+#4b69ff sólo como Mil-Spec y #e8962e sólo como modelo/predicción: OK
+colores viejos que ya no deberían aparecer: ['#ff7a59']
+--blue en el CSS: no está
+
+CIEDE2000 entre colores de ROLES DISTINTOS (umbral 15; gris contra Consumer exceptuado):
+    14.9  #9fb3cc Consumer          vs #919191 gris              exento
+    15.3  #6f6a64 sin identificar   vs #919191 gris              OK
+    18.2  #9fb3cc Consumer          vs #26b5c7 caja              OK
+    19.2  #e8962e modelo (ámbar)    vs #ffab91 Armory            OK
+    19.4  #e8962e modelo (ámbar)    vs #9a724a drop de mapa      OK
+    19.5  #9fb3cc Consumer          vs #cea8d5 paquete souvenir  OK
+    19.7  #5e98d9 Industrial        vs #26b5c7 caja              OK
+    20.5  #9a724a drop de mapa      vs #919191 gris              OK
+    20.8  #f0a93b --accent          vs #ffab91 Armory            OK
+    20.8  #5e98d9 Industrial        vs #919191 gris              OK
+    21.6  #eb4b4b Covert            vs #ffab91 Armory            OK
+    22.5  #cea8d5 paquete souvenir  vs #919191 gris              OK
+    22.9  #f0a93b --accent          vs #9a724a drop de mapa      OK
+    23.1  #26b5c7 caja              vs #919191 gris              OK
+    24.4  #eb4b4b Covert            vs #9a724a drop de mapa      OK
+   (69 pares; se muestran los menores a 25)
+Resultado deltaE: OK, todos ≥ 15
